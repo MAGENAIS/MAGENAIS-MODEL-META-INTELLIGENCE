@@ -1,0 +1,24 @@
+{
+  "id": "magenais.meta-intelligence",
+  "name": "Meta-Intelligence",
+  "version": "0.1.0",
+  "description": "A thin orchestrator over the Problem -> Understand -> Goals/Constraints -> Known/Unknown/Assumptions/Evidence -> Capability Decomposition -> Candidate Strategies -> Evaluation/Selection -> Execution/Composition -> Verification -> Result -> Adaptation/Re-plan pipeline. Version 0.1.0 implements only the first seven stages (problem intake, verbatim; mechanical whitespace normalization; goals/constraints recording with caller/extracted origin tracking; known/unknown/assumption/evidence tracking with the same origin tracking; capability decomposition that checks required capabilities against an existing capability graph; a minimal, non-selecting set of candidate strategies built from that decomposition; scoring of those candidates with a DecisionScore-shaped scorer and an explicit selection, or an explicit 'none selected'), plus an AWU-08 action-governance boundary that records an explicit, caller-supplied ACT/WAIT/ASK/SIMULATE decision against that selection ('ACT' is refused unless a candidate was actually selected), plus an AWU-09 result-recording step that records the caller's claimed outcome for an ACT/SIMULATE-governed task and mechanically verifies it against the task's own goals/constraints and knowns, plus an AWU-10 adaptation step that records an explicit, caller-supplied retry/re-plan/escalate/accept decision for a 'goals-not-met' or 'insufficient-basis' verification outcome. It does not yet execute, compose, re-execute, or automatically retry anything — see README.md's Status section and CHANGELOG.md.",
+  "author": {
+    "name": "MAGENAIS",
+    "organization": "MAGENAIS"
+  },
+  "type": "algorithm",
+  "capabilities": ["problem-intake", "problem-normalization", "goals-constraints-recording", "epistemic-tracking", "capability-decomposition", "candidate-strategy-generation", "strategy-evaluation-selection", "action-governance", "result-verification", "adaptation-decision"],
+  "runtimes": ["builtin-local"],
+  "license": {
+    "type": "Apache-2.0",
+    "url": "https://www.apache.org/licenses/LICENSE-2.0"
+  },
+  "pricing": {
+    "type": "free"
+  },
+  "trust": "experimental",
+  "uri": "magenais://meta-intelligence@0.1.0",
+  "repository": "https://github.com/MAGENAIS/MAGENAIS-MODEL-META-INTELLIGENCE",
+  "documentation": "https://github.com/MAGENAIS/MAGENAIS-MODEL-META-INTELLIGENCE#readme"
+}

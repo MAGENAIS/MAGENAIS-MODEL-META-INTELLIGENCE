@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Meta-Intelligence — orchestration layer for MAGENAIS's cognitive pipeline</title>
+<meta name="description" content="Meta-Intelligence tracks a caller's problem through intake, understanding, goals/constraints, and known/unknown/assumption/evidence stages, tagging every item's origin as caller-stated or Meta-Intelligence-extracted. Zero dependencies, runs locally." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+
+:root {
+  --navy: #0B1220;
+  --navy-2: #121B2E;
+  --navy-soft: #1B2842;
+  --paper: #FAFAF8;
+  --surface: #FFFFFF;
+  --surface-2: #F3F4F2;
+  --border: #E4E3DE;
+  --ink: #14181A;
+  --ink-soft: #5A6260;
+  --ink-faint: #8A928F;
+  --gold: #C9973F;
+  --gold-ink: #7A5A1E;
+  --teal: #1F6F78;
+  --ok: #1F6F78;
+  --dev: #A9784F;
+  --planned: #6B7674;
+  --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --head: "Space Grotesk", var(--sans);
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --radius: 12px;
+  --shadow-sm: 0 1px 2px rgba(15,20,20,.06), 0 1px 1px rgba(15,20,20,.04);
+  --shadow-md: 0 8px 24px rgba(15,20,20,.08), 0 2px 6px rgba(15,20,20,.05);
+}
+* { box-sizing: border-box; }
+html { color-scheme: light; scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--gold-ink); text-decoration: none; }
+a:hover { color: var(--gold); text-decoration: underline; text-underline-offset: 3px; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 3px; }
+.wrap { max-width: 900px; margin: 0 auto; padding: 0 28px; }
+h1, h2, h3 { font-family: var(--head); font-weight: 600; letter-spacing: -0.01em; color: var(--ink); }
+
+/* ---- Top nav ---- */
+.topnav {
+  position: sticky; top: 0; z-index: 20;
+  background: rgba(11,18,32,.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.navwrap { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+.brand { display: flex; align-items: baseline; gap: 8px; color: #F4F2EC; font-family: var(--head); font-weight: 700; font-size: 1.05rem; letter-spacing: 0.01em; }
+.brand:hover { color: #F4F2EC; text-decoration: none; }
+.brand-mark { color: var(--gold); }
+.brand-sub { font-family: var(--mono); font-weight: 500; font-size: 0.7rem; color: #9AA5B5; letter-spacing: 0.08em; text-transform: uppercase; padding-left: 6px; border-left: 1px solid rgba(255,255,255,.18); }
+.navlinks { display: flex; gap: 26px; }
+.navlinks a { color: #C9CFDA; font-size: 0.92rem; font-weight: 500; margin-left: 26px; }
+.navlinks a:first-child { margin-left: 0; }
+.navlinks a:hover { color: #fff; text-decoration: none; }
+.navlinks a.is-active { color: var(--gold); }
+
+/* ---- Hero ---- */
+header.hero {
+  background:
+    radial-gradient(1100px 420px at 85% -10%, rgba(201,151,63,.20), transparent 60%),
+    linear-gradient(180deg, var(--navy) 0%, var(--navy-2) 100%);
+  color: #F4F2EC;
+  padding: 64px 0 56px;
+}
+.breadcrumb { font-family: var(--mono); font-size: 12.5px; color: #9AA5B5; margin: 0 0 22px; letter-spacing: .01em; }
+.breadcrumb a { color: #9AA5B5; }
+.breadcrumb a:hover { color: var(--gold); }
+.breadcrumb span { margin: 0 6px; color: #4C5768; }
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 12.5px; color: #E7DCC4;
+  background: rgba(201,151,63,.12); border: 1px solid rgba(201,151,63,.35);
+  padding: 5px 12px; border-radius: 999px; margin: 0 0 20px;
+}
+header.hero h1 { font-size: clamp(1.35rem, 2.1vw, 1.6rem); font-weight: 500; line-height: 1.32; margin: 0 0 18px; color: #C6CCD6; max-width: 46ch; }
+header.hero h1 .accent { color: var(--gold); }
+.lede { font-size: 1.15rem; color: #C6CCD6; max-width: 60ch; margin: 0 0 30px; font-weight: 400; }
+.hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 34px; }
+.hero-actions .btn { margin: 0 12px 12px 0; }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 20px; border-radius: 8px; font-weight: 600; font-size: 0.94rem; border: 1px solid transparent; transition: transform .12s ease, box-shadow .12s ease; }
+.btn:hover { text-decoration: none; }
+.btn-primary { background: var(--gold); color: #241905; }
+.btn-primary:hover { background: #D9A94F; color: #241905; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(201,151,63,.35); }
+.btn-ghost { background: transparent; color: #F4F2EC; border-color: rgba(255,255,255,.28); }
+.btn-ghost:hover { background: rgba(255,255,255,.08); color: #fff; transform: translateY(-1px); }
+dl.badges { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; list-style: none; }
+dl.badges div { display: flex; gap: 6px; align-items: center; font-family: var(--mono); font-size: 12.5px; color: #C6CCD6; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); padding: 6px 12px; border-radius: 7px; margin: 0 10px 10px 0; }
+dl.badges dt { color: #8C96A6; }
+dl.badges dt::after { content: ":"; }
+dl.badges dd { margin: 0; color: #F0EDE4; font-weight: 500; }
+
+/* ---- Main / cards ---- */
+main { padding: 56px 0 30px; }
+section + section { margin-top: 34px; }
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px 36px;
+  box-shadow: var(--shadow-sm);
+}
+.section-eyebrow { font-family: var(--mono); font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--gold-ink); margin: 0 0 8px; font-weight: 600; }
+h2 { font-size: 1.35rem; margin: 0 0 14px; }
+.section-note { color: var(--ink-soft); font-size: 0.98rem; max-width: 62ch; margin: 0 0 20px; }
+p.body-text { max-width: 68ch; margin: 0 0 14px; color: var(--ink); }
+p.body-text:last-child { margin-bottom: 0; }
+.disclaimer {
+  border-left: 3px solid var(--dev);
+  background: var(--surface-2);
+  padding: 12px 18px;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+  border-radius: 0 8px 8px 0;
+  margin-top: 18px;
+}
+.terminal {
+  background: var(--navy);
+  color: #DCE7E5;
+  font-family: var(--mono);
+  font-size: 0.86rem;
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 18px 0 0;
+  box-shadow: var(--shadow-md);
+}
+.terminal-bar { display: flex; gap: 6px; padding: 11px 14px; background: rgba(255,255,255,.04); border-bottom: 1px solid rgba(255,255,255,.08); }
+.terminal-dot { width: 10px; height: 10px; border-radius: 50%; background: #4C5768; }
+.terminal pre { margin: 0; padding: 20px 22px; overflow-x: auto; line-height: 1.65; }
+.terminal .muted { color: #7C8D89; }
+.terminal .accent { color: #E4C583; font-weight: 600; }
+table.ranking { border-collapse: collapse; width: 100%; margin: 4px 0 0; font-size: 0.92rem; }
+table.ranking th, table.ranking td { text-align: left; padding: 10px 14px 10px 0; border-bottom: 1px solid var(--border); }
+table.ranking th { font-family: var(--mono); font-weight: 600; color: var(--ink-soft); font-size: 0.74rem; text-transform: uppercase; letter-spacing: .05em; }
+table.ranking td.num { font-family: var(--mono); }
+table.ranking tr:last-child td { border-bottom: none; }
+ul.plain { list-style: none; padding: 0; margin: 0; max-width: 66ch; display: flex; flex-direction: column; gap: 12px; }
+ul.plain li { position: relative; padding-left: 24px; color: var(--ink); }
+ul.plain li::before { content: "—"; position: absolute; left: 0; color: var(--gold-ink); font-weight: 700; }
+code { font-family: var(--mono); background: var(--surface-2); padding: 1px 6px; border-radius: 4px; font-size: 0.88em; }
+.resources { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; padding: 0; margin: 0; list-style: none; }
+.resources li { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; transition: box-shadow .15s ease, transform .15s ease, border-color .15s ease; }
+.resources li:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); border-color: #D9CBA3; }
+.resources a { font-weight: 600; display: block; margin-bottom: 5px; font-size: 0.98rem; }
+.resources span { color: var(--ink-soft); font-size: 0.88rem; }
+
+/* ---- Catalog-specific record cards ---- */
+ul.records { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; }
+.record {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 26px 30px; box-shadow: var(--shadow-sm); transition: box-shadow .15s ease, border-color .15s ease;
+}
+.record:hover { box-shadow: var(--shadow-md); border-color: #D9CBA3; }
+.record-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 10px; }
+.record-id { font-family: var(--mono); font-size: 0.78rem; color: var(--ink-faint); margin: 0 0 3px; }
+.record-name { font-size: 1.3rem; font-family: var(--head); font-weight: 600; margin: 0; }
+.status { font-family: var(--mono); font-size: 0.72rem; padding: 5px 11px; border-radius: 999px; white-space: nowrap; font-weight: 600; letter-spacing: .02em; }
+.status.live { color: #0E4B45; background: #DCEDE9; border: 1px solid #B7D9D1; }
+.status.dev { color: var(--dev); background: #F5EBDE; border: 1px solid #E3CDA9; }
+.status.planned { color: var(--planned); background: #EEEEEC; border: 1px solid #D8D8D5; }
+.record-desc { max-width: 66ch; color: var(--ink); margin: 0 0 14px; }
+dl.meta { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 0 0 6px; font-size: 0.84rem; font-family: var(--mono); color: var(--ink-soft); }
+dl.meta div { display: flex; gap: 5px; margin-right: 22px; }
+dl.meta div:last-child { margin-right: 0; }
+dl.meta dt::after { content: ":"; }
+dl.meta dd { margin: 0; color: var(--ink); }
+.record-link { font-size: 0.92rem; font-weight: 600; margin: 10px 0 0; }
+.empty-note { font-size: 0.88rem; color: var(--ink-faint); font-style: italic; margin-top: 4px; }
+
+/* ---- Footer ---- */
+footer { background: var(--navy); color: #C6CCD6; margin-top: 72px; }
+.footer-top { padding: 52px 0 36px; display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 32px; }
+.footer-brand-mark { font-family: var(--mono); font-weight: 700; font-size: 1.05rem; letter-spacing: .04em; margin: 0 0 10px; }
+.footer-brand-mark a { color: #F4F2EC; }
+.footer-brand-mark a:hover { color: #fff; text-decoration: none; }
+.footer-brand-mark .brand-mark { color: var(--gold); }
+.footer-blurb { font-size: 0.92rem; color: #9AA5B5; max-width: 34ch; margin: 0; }
+.footer-col h3 { font-family: var(--mono); font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: #7C879A; margin: 0 0 14px; font-weight: 600; }
+.footer-col a { display: block; color: #C6CCD6; font-size: 0.92rem; margin-bottom: 10px; }
+.footer-col a:hover { color: #fff; }
+.footer-bottom { border-top: 1px solid rgba(255,255,255,.1); padding: 22px 0 40px; font-size: 0.84rem; color: #7C879A; }
+.footer-bottom p { margin: 0; max-width: 74ch; }
+
+@media (max-width: 720px) {
+  .footer-top { grid-template-columns: 1fr; gap: 26px; }
+  .navlinks { gap: 16px; }
+  .card { padding: 24px 22px; }
+  header.hero { padding: 44px 0 40px; }
+  main { padding: 40px 0 20px; }
+}
+@media (max-width: 480px) {
+  .navlinks a:not(.always-show) { display: none; }
+}
+
+
+/* ============================================================
+   V2 — Header matched to the MAGENAIS app shell, bold model
+   name treatment, in-page document viewer, catalog grid.
+   ============================================================ */
+
+/* ---- Header: rebuilt to match the MAGENAIS app topbar ---- */
+.topnav {
+  background: #0B0C0C;
+  border-bottom: 1px solid rgba(255,255,255,.09);
+}
+.navwrap { display: flex; align-items: center; justify-content: space-between; height: auto; padding: 12px 0; }
+a.brand { display: flex; align-items: center; gap: 12px; }
+a.brand:hover { text-decoration: none; }
+.brand-logo { height: 36px; width: auto; object-fit: contain; filter: drop-shadow(0 1px 3px rgba(0,0,0,.5)); flex-shrink: 0; }
+.brand-text { display: flex; flex-direction: column; gap: 2px; line-height: 1; }
+.brand-text .mark {
+  font-family: var(--mono); font-weight: 700; font-size: 16.5px; letter-spacing: .05em;
+  color: #FBFAF6;
+}
+.brand-text .mark .accent { color: var(--gold); }
+.brand-text .tag {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
+  color: #9AA5B5; padding-top: 1px;
+}
+@media (max-width: 480px) { .brand-text .tag { display: none; } }
+
+/* ---- Bold model name, top of hero ---- */
+.model-name {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  font-family: var(--mono); font-weight: 700; letter-spacing: .01em;
+  font-size: clamp(2.3rem, 5vw, 3.2rem);
+  color: #FBFAF6; margin: 0 0 14px;
+}
+.model-name .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 4px rgba(201,151,63,.2); flex-shrink: 0; margin-right: 4px; }
+.model-name .pill {
+  font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: .02em;
+  color: #E7DCC4; background: rgba(201,151,63,.14); border: 1px solid rgba(201,151,63,.35);
+  padding: 3px 10px; border-radius: 999px; text-transform: none; margin-left: 6px;
+}
+
+/* ---- In-page document viewer (replaces navigating to a raw file) ---- */
+[data-doc] { cursor: pointer; }
+.doc-modal-backdrop {
+  position: fixed; inset: 0; z-index: 200; display: none;
+  background: rgba(6,8,10,.66); backdrop-filter: blur(3px);
+  align-items: flex-start; justify-content: center; padding: 6vh 20px;
+}
+.doc-modal-backdrop.open { display: flex; }
+.doc-modal {
+  background: var(--surface); width: 100%; max-width: 780px; max-height: 86vh;
+  border-radius: 14px; overflow: hidden; display: flex; flex-direction: column;
+  box-shadow: 0 30px 70px rgba(0,0,0,.45);
+}
+.doc-modal-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 15px 22px; background: var(--navy); border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.doc-modal-head-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.doc-modal-eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: #9AA5B5; }
+.doc-modal-title { font-family: var(--mono); font-size: 14px; color: #FBFAF6; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-modal-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.doc-modal-raw {
+  font-family: var(--mono); font-size: 11px; color: #C6CCD6; border: 1px solid rgba(255,255,255,.22);
+  border-radius: 6px; padding: 5px 10px; background: transparent;
+}
+.doc-modal-raw:hover { background: rgba(255,255,255,.08); color: #fff; text-decoration: none; }
+.doc-modal-close {
+  background: none; border: none; color: #C6CCD6; font-size: 20px; line-height: 1;
+  cursor: pointer; padding: 4px 9px; border-radius: 6px;
+}
+.doc-modal-close:hover { background: rgba(255,255,255,.1); color: #fff; }
+.doc-modal-body { padding: 26px 32px 36px; overflow-y: auto; font-size: .97rem; }
+.doc-modal-body h1, .doc-modal-body h2, .doc-modal-body h3 { font-family: var(--head); margin: 1.3em 0 .5em; }
+.doc-modal-body h1:first-child, .doc-modal-body h2:first-child, .doc-modal-body h3:first-child { margin-top: 0; }
+.doc-modal-body p { margin: 0 0 1em; color: var(--ink); }
+.doc-modal-body ul { margin: 0 0 1em; padding-left: 22px; }
+.doc-modal-body li { margin-bottom: .4em; }
+.doc-modal-body pre {
+  background: var(--navy); color: #DCE7E5; padding: 16px 18px; border-radius: 10px;
+  overflow-x: auto; font-family: var(--mono); font-size: .84rem; line-height: 1.6; margin: 0 0 1.2em;
+}
+.doc-modal-body pre code { background: none; padding: 0; color: inherit; }
+.doc-modal-body :not(pre) > code { font-family: var(--mono); background: var(--surface-2); padding: 1px 6px; border-radius: 4px; font-size: .88em; }
+.doc-modal-body a { color: var(--gold-ink); }
+.doc-modal-body table { border-collapse: collapse; width: 100%; margin: 0 0 1.2em; font-size: .88rem; }
+.doc-modal-body th, .doc-modal-body td { border: 1px solid var(--border); padding: 7px 11px; text-align: left; }
+.doc-modal-body th { background: var(--surface-2); font-family: var(--mono); font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-soft); }
+.doc-modal-status { font-family: var(--mono); font-size: .86rem; color: var(--ink-faint); }
+@media (max-width: 640px) { .doc-modal-body { padding: 20px 20px 28px; } .doc-modal-backdrop { padding: 0; align-items: stretch; } .doc-modal { max-width: none; max-height: none; height: 100vh; border-radius: 0; } }
+
+/* ---- Catalog: professional grid of model cards ---- */
+ul.records.grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;
+  list-style: none; margin: 0; padding: 0;
+}
+ul.records.grid > li { display: flex; }
+ul.records.grid .record {
+  display: flex; flex-direction: column; width: 100%;
+  border-top: 3px solid var(--gold);
+  position: relative;
+}
+.record-icon {
+  width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+  background: linear-gradient(160deg, var(--navy) 0%, var(--navy-soft) 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-weight: 700; font-size: 16px; color: var(--gold);
+}
+.record-titles { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.record-name { font-size: 1.28rem; font-family: var(--head); font-weight: 700; margin: 0; color: var(--ink); }
+.record-id { font-family: var(--mono); font-size: .74rem; color: var(--ink-faint); margin: 1px 0 0; }
+.record-desc { flex-grow: 1; }
+.record-foot { margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+
+</style>
+</head>
+<body>
+<nav class="topnav">
+<div class="wrap navwrap">
+<a class="brand" href="https://magenais.github.io/MAGENAIS-Public/"><img class="brand-logo" src="./assets/magenais-logo.png" alt="MAGENAIS" aria-hidden="true"><span class="brand-text"><span class="mark">MAGENAI<span class="accent">S</span></span><span class="tag">Models &middot; Meta-Intelligence</span></span></a>
+<div class="navlinks">
+<a href="https://magenais.github.io/MAGENAIS-MODELS/" class="is-active">Models Hub</a><a href="./docs/roadmap.md" data-doc data-doc-title="Roadmap">Docs</a><a href="https://github.com/MAGENAIS/MAGENAIS-MODEL-META-INTELLIGENCE">GitHub</a>
+</div>
+</div>
+</nav>
+<header class="hero">
+<div class="wrap">
+<p class="breadcrumb"><a href="https://magenais.github.io/MAGENAIS-Public/">MAGENAIS</a><span>/</span><a href="https://magenais.github.io/MAGENAIS-MODELS/">Models</a><span>/</span>Meta-Intelligence</p>
+<div class="model-name"><span class="dot"></span>Meta-Intelligence<span class="pill">magenais.meta-intelligence &middot; v0.1.0 &middot; work-in-progress</span></div>
+<h1>Orchestration layer for MAGENAIS's <span class="accent">cognitive pipeline.</span></h1>
+<p class="lede">Advances a caller's problem through a fixed sequence of stages — intake, understanding, goals/constraints, and known/unknown/assumption/evidence tracking — recording every stage's output alongside, never in place of, what came before, with each item tagged as caller-stated or Meta-Intelligence-extracted.</p>
+<div class="hero-actions">
+<a class="btn btn-primary" href="https://github.com/MAGENAIS/MAGENAIS-MODEL-META-INTELLIGENCE">View on GitHub</a>
+<a class="btn btn-ghost" href="./docs/roadmap.md" data-doc data-doc-title="Roadmap">Read the roadmap</a>
+</div>
+<dl class="badges">
+<div><dt>License</dt><dd>Apache-2.0</dd></div>
+<div><dt>Type</dt><dd>algorithm</dd></div>
+<div><dt>Trust</dt><dd>experimental</dd></div>
+<div><dt>Dependencies</dt><dd>zero</dd></div>
+</dl>
+</div>
+</header>
+<main>
+<div class="wrap">
+
+<section id="about">
+<div class="card">
+<p class="section-eyebrow">Overview</p>
+<h2>What it does</h2>
+<p class="body-text">Given a caller's problem statement, Meta-Intelligence tracks a task through a fixed pipeline of eleven stages, of which the first four are implemented in v0.1.0: <code>intake()</code> records the statement verbatim; <code>understand()</code> derives a mechanically whitespace-normalized restatement; <code>addGoalsConstraints()</code> records goals and constraints; and <code>addEpistemicTracking()</code> records knowns, unknowns, assumptions, and evidence. Each stage can only run once per task, in order — calling a stage out of order or a second time is rejected rather than silently re-run.</p><p class="body-text">Every goal, constraint, known, unknown, assumption, and evidence item is tagged with its <code>origin</code>: <code>'caller'</code> for text supplied verbatim by the caller, or <code>'extracted'</code> for text Meta-Intelligence derived. The two are never merged or silently rewritten into each other, even when their text happens to coincide. It is a research-oriented, early-stage orchestrator — not yet a <code>Model</code> the MAGENAIS router can call. See <a href="./docs/roadmap.md" data-doc data-doc-title="Roadmap">docs/roadmap.md</a> for the full pipeline and what's still to come.</p>
+</div>
+</section>
+
+<section id="example">
+<div class="card">
+<p class="section-eyebrow">Example</p>
+<h2>Worked example</h2>
+<p class="section-note">Output of <a href="./examples/basic-usage.mjs" data-doc data-doc-title="examples/basic-usage.mjs">examples/basic-usage.mjs</a> — a checkout drop-off problem carried through all four implemented stages.</p>
+<table class="ranking">
+<thead><tr><th>Stage</th><th>Method</th><th>Recorded</th></tr></thead>
+<tbody>
+<tr><td>received</td><td><code>intake()</code></td><td>verbatim problem statement</td></tr><tr><td>understood</td><td><code>understand()</code></td><td>whitespace-normalized restatement</td></tr><tr><td>goals-constraints</td><td><code>addGoalsConstraints()</code></td><td>2 goals, 1 constraint</td></tr><tr><td>epistemic-tracking</td><td><code>addEpistemicTracking()</code></td><td>1 known, 1 unknown, 1 assumption, 1 evidence</td></tr>
+</tbody>
+</table>
+<div class="terminal">
+<div class="terminal-bar"><span class="terminal-dot"></span><span class="terminal-dot"></span><span class="terminal-dot"></span></div>
+<pre><span class="muted">stage after intake: received</span>
+<span class="muted">verbatim statement: "Reduce   checkout\n\tdrop-off on mobile."</span>
+<span class="muted">stage after understand: understood</span>
+<span class="muted">normalized statement: "Reduce checkout drop-off on mobile."</span>
+<span class="muted">stage after addGoalsConstraints: goals-constraints</span>
+<span class="muted">stage after addEpistemicTracking: epistemic-tracking</span>
+
+<span class="accent">knowns: [ '[caller] Checkout has 5 steps today' ]</span></pre>
+</div>
+<p class="disclaimer">Meta-Intelligence tracks provenance for every item it records; it does not itself judge whether a goal, assumption, or piece of evidence is correct.</p>
+</div>
+</section>
+
+<section id="limitations">
+<div class="card">
+<p class="section-eyebrow">Know before you use it</p>
+<h2>Limitations</h2>
+<ul class="plain">
+<li>No capability decomposition, strategy generation/selection, execution, verification, or adaptation yet — only <code>intake()</code>, <code>understand()</code>, <code>addGoalsConstraints()</code>, and <code>addEpistemicTracking()</code> exist to call.</li><li>Each pipeline stage can only run once per task, in the fixed order above — calling a stage out of order or a second time throws rather than silently re-running it.</li><li>Item text (goals, constraints, knowns, unknowns, assumptions, evidence) is kept verbatim, only trimmed — Meta-Intelligence never infers, rewrites, or deduplicates across items or origins.</li><li>Not yet wired into a MAGENAIS <code>ModelHub</code>/<code>ModelRegistry</code> — this repository and the copy under MAGENAIS-main's <code>src/ModelsHub/meta-intelligence/</code> are kept in sync by hand.</li>
+</ul>
+</div>
+</section>
+
+<section id="resources">
+<p class="section-eyebrow">Next steps</p>
+<h2>Get started</h2>
+<ul class="resources">
+<li><a href="./README.md" data-doc data-doc-title="README.md">README</a><span>Install, API, full example</span></li><li><a href="./docs/roadmap.md" data-doc data-doc-title="Roadmap">Roadmap</a><span>Full eleven-stage pipeline and AWU status</span></li><li><a href="./tests/metaIntelligenceOrchestrator.test.ts" data-doc data-doc-title="tests/metaIntelligenceOrchestrator.test.ts">Tests</a><span>19 tests, node:test</span></li><li><a href="./CHANGELOG.md" data-doc data-doc-title="CHANGELOG.md">Changelog</a><span>Version history</span></li><li><a href="https://github.com/MAGENAIS/MAGENAIS-MODEL-META-INTELLIGENCE">Source on GitHub</a><span>Clone, fork, or open an issue</span></li><li><a href="https://magenais.github.io/MAGENAIS-MODELS/">MAGENAIS Models catalog</a><span>Browse all models</span></li>
+</ul>
+</section>
+
+</div>
+</main>
+<footer>
+<div class="wrap footer-top">
+<div>
+<p class="footer-brand-mark"><a href="https://magenais.github.io/MAGENAIS-Public/"><span class="brand-mark">M</span>AGENAIS Models</a></p>
+<p class="footer-blurb">A catalog of independent, open-source, research-oriented models. Runs locally — no API key, no account, no cloud service required.</p>
+</div>
+<div class="footer-col">
+<h3>META-INTELLIGENCE</h3>
+<a href="./README.md" data-doc data-doc-title="README.md">README</a>
+<a href="./docs/roadmap.md" data-doc data-doc-title="Roadmap">Roadmap</a>
+<a href="./CHANGELOG.md" data-doc data-doc-title="CHANGELOG.md">Changelog</a>
+<a href="./tests/metaIntelligenceOrchestrator.test.ts" data-doc data-doc-title="tests/metaIntelligenceOrchestrator.test.ts">Tests</a>
+</div>
+<div class="footer-col">
+<h3>MAGENAIS</h3>
+<a href="https://magenais.github.io/MAGENAIS-Public/">MAGENAIS App</a>
+<a href="https://magenais.github.io/MAGENAIS-MODELS/">Models catalog</a>
+<a href="https://github.com/MAGENAIS">GitHub organization</a>
+<a href="https://github.com/MAGENAIS/MAGENAIS-MODELS/blob/main/CONTRIBUTING.md">Contributing</a>
+</div>
+</div>
+<div class="wrap footer-bottom">
+<p>Apache-2.0 licensed. Independent of MAGENAIS Core, which is separate and proprietary — this package runs without it and depends on nothing from it.</p>
+</div>
+</footer>
+
+<script id="__doc_data__" type="application/json">{"./README.md": "# Meta-Intelligence\n\nA thin orchestration/composition layer for MAGENAIS's cognitive\npipeline. Part of the\n[MAGENAIS Model Hub](https://github.com/MAGENAIS/MAGENAIS-MODELS), but\nindependent — you can use this package without installing or running\nMAGENAIS at all.\n\n> **Early stage.** This repository was created alongside AWU-01/AWU-02/\n> AWU-03/AWU-04 of the Meta-Intelligence build and currently implements\n> only the first four of eleven pipeline stages. It is not yet a `Model`\n> the MAGENAIS router can call — see [Status](#status) before relying on\n> it for anything beyond intake/normalization/goals-constraints/epistemic\n> tracking.\n\n## The full pipeline (target)\n\n```\nProblem -> Understand -> Goals/Constraints -> Known/Unknown/Assumptions/Evidence\n        -> Capability Decomposition -> Candidate Strategies -> Evaluation/Selection\n        -> Execution/Composition -> Verification -> Result -> Adaptation/Re-plan\n```\n\n## Status\n\n| Stage | Implemented? |\n|---|---|\n| Problem (intake) | ✅ `intake()` — records the caller's statement verbatim |\n| Understand | ✅ `understand()` — mechanical whitespace normalization only, no interpretation |\n| Goals/Constraints | ✅ `addGoalsConstraints()` — records goals/constraints, each tagged `'caller'` or `'extracted'` |\n| Known/Unknown/Assumptions/Evidence | ✅ `addEpistemicTracking()` — records knowns/unknowns/assumptions/evidence, each tagged `'caller'` or `'extracted'` |\n| Capability Decomposition | ❌ not yet |\n| Candidate Strategies | ❌ not yet |\n| Evaluation/Selection | ❌ not yet |\n| Execution/Composition | ❌ not yet |\n| Verification | ❌ not yet |\n| Result | ❌ not yet |\n| Adaptation/Re-plan | ❌ not yet |\n\nSee `CHANGELOG.md` for which Atomic Work Unit (AWU) added what, and the\nMAGENAIS repository's `.mi/CONTEXT_MAP.json` / `META_INTELLIGENCE_BUILD_PROMPT_V4.md`\nfor the build process this package is produced under.\n\n## What it does today\n\n`MetaIntelligenceOrchestrator` tracks tasks through four stages:\n\n1. **`intake(request)`** — records a caller's problem statement verbatim\n   under a task id, at stage `'received'`. Never rewrites the statement.\n2. **`understand(id)`** — collapses incidental whitespace differences in\n   an already-`'received'` task's statement into a `normalizedStatement`,\n   and advances the task to `'understood'`. This is a mechanical\n   transformation only (whitespace collapsing) — **not** semantic\n   interpretation, goal extraction, or constraint extraction. The\n   original `problem.statement` is never modified; provenance (what the\n   caller actually said) is always preserved alongside the derived view.\n3. **`addGoalsConstraints(id, request)`** — attaches the caller's goals\n   and constraints to an already-`'understood'` task and advances it to\n   `'goals-constraints'`. Each item is tagged with its `origin`\n   (`'caller'` for text supplied verbatim by the caller, `'extracted'`\n   for text Meta-Intelligence derived) — origins are never merged or\n   silently rewritten into each other.\n4. **`addEpistemicTracking(id, request)`** — attaches the caller's\n   knowns, unknowns, assumptions, and evidence to an already-\n   `'goals-constraints'` task and advances it to `'epistemic-tracking'`.\n   Each of the four is tracked as its own list, and every item is tagged\n   with the same `'caller'` / `'extracted'` `origin` used by\n   goals/constraints — never merged or silently rewritten into each\n   other. Still no capability decomposition.\n\n```ts\nimport { MetaIntelligenceOrchestrator } from '@magenais/meta-intelligence';\n\nconst orchestrator = new MetaIntelligenceOrchestrator();\n\nconst task = orchestrator.intake({ statement: 'Reduce checkout drop-off.' });\nconsole.log(task.stage); // 'received'\n\nconst understood = orchestrator.understand(task.id);\nconsole.log(understood.stage); // 'understood'\nconsole.log(understood.understanding?.normalizedStatement);\n\nconst withGoals = orchestrator.addGoalsConstraints(task.id, {\n  goals: [{ text: 'Increase checkout completion rate', origin: 'caller' }],\n  constraints: [{ text: 'No changes to the payment provider', origin: 'caller' }],\n});\nconsole.log(withGoals.stage); // 'goals-constraints'\nconsole.log(withGoals.goalsConstraints?.goals[0].origin); // 'caller'\n\nconst withEpistemics = orchestrator.addEpistemicTracking(task.id, {\n  knowns: [{ text: 'Checkout has 5 steps today', origin: 'caller' }],\n  unknowns: [{ text: 'Which step causes the most drop-off', origin: 'extracted' }],\n  assumptions: [],\n  evidence: [],\n});\nconsole.log(withEpistemics.stage); // 'epistemic-tracking'\nconsole.log(withEpistemics.epistemicTracking?.knowns[0].origin); // 'caller'\n```\n\nSee `examples/basic-usage.mjs` for a runnable version of this.\n\n## Input / output shapes\n\n```ts\ninterface MetaIntelligenceIntakeRequest {\n  statement: string; // must be non-empty after trimming\n  id?: string;        // optional caller-supplied id\n}\n\ntype MetaIntelligenceStage = 'received' | 'understood' | 'goals-constraints' | 'epistemic-tracking';\n\ninterface MetaIntelligenceProblem {\n  statement: string;   // verbatim, never rewritten\n  receivedAt: string;  // ISO-8601\n}\n\ninterface MetaIntelligenceUnderstanding {\n  normalizedStatement: string; // whitespace-collapsed only\n  understoodAt: string;        // ISO-8601\n}\n\ntype MetaIntelligenceOrigin = 'caller' | 'extracted';\n\ninterface MetaIntelligenceGoalOrConstraint {\n  id: string;\n  text: string;                  // verbatim per its origin\n  origin: MetaIntelligenceOrigin;\n}\n\ninterface MetaIntelligenceGoalsConstraints {\n  goals: MetaIntelligenceGoalOrConstraint[];\n  constraints: MetaIntelligenceGoalOrConstraint[];\n  recordedAt: string; // ISO-8601\n}\n\ninterface MetaIntelligenceEpistemicItem {\n  id: string;\n  text: string;                  // verbatim per its origin\n  origin: MetaIntelligenceOrigin;\n}\n\ninterface MetaIntelligenceEpistemicTracking {\n  knowns: MetaIntelligenceEpistemicItem[];\n  unknowns: MetaIntelligenceEpistemicItem[];\n  assumptions: MetaIntelligenceEpistemicItem[];\n  evidence: MetaIntelligenceEpistemicItem[];\n  recordedAt: string; // ISO-8601\n}\n\ninterface MetaIntelligenceTask {\n  id: string;\n  problem: MetaIntelligenceProblem;\n  stage: MetaIntelligenceStage;\n  understanding?: MetaIntelligenceUnderstanding;       // present once 'understood' or later\n  goalsConstraints?: MetaIntelligenceGoalsConstraints; // present once 'goals-constraints' or later\n  epistemicTracking?: MetaIntelligenceEpistemicTracking; // present once 'epistemic-tracking'\n}\n```\n\n## Limitations\n\n- No capability decomposition, strategy generation/selection, execution,\n  verification, or adaptation. Calling anything beyond `intake()` /\n  `understand()` / `addGoalsConstraints()` / `addEpistemicTracking()`\n  does not exist — there is nothing else to call.\n- Not yet wired into a MAGENAIS `ModelHub`/`ModelRegistry` — this\n  repository and the copy under MAGENAIS-main's\n  `src/ModelsHub/meta-intelligence/` are kept in sync by hand, the same\n  way DecisionScore/PatternSense/AnomalyMind were before their own\n  connection phases (see this repo's `CONTRIBUTING.md`).\n\n## Version\n\n`0.1.0` — versioned independently of MAGENAIS itself. Expect breaking\nchanges to `MetaIntelligenceTask`'s shape as later AWUs add stages.\n\n## License\n\nApache-2.0. See `LICENSE`.\n", "./docs/roadmap.md": "# Roadmap\n\nMeta-Intelligence is built one Atomic Work Unit (AWU) at a time against\nthe pipeline in the Definition of Done:\n\n```\nProblem -> Understand -> Goals/Constraints -> Known/Unknown/Assumptions/Evidence\n        -> Capability Decomposition -> Candidate Strategies -> Evaluation/Selection\n        -> Execution/Composition -> Verification -> Result -> Adaptation/Re-plan\n```\n\n| AWU | Adds | Status |\n|---|---|---|\n| AWU-01 | Contract + thin orchestrator + entry tests (`intake()`) | Done |\n| AWU-02 | Problem normalization / understanding state (`understand()`) | Done |\n| AWU-03 | Goals + constraints (caller vs. extracted origin preserved) | Done |\n| AWU-04 | Known/unknown/assumption/evidence tracking | Done |\n| AWU-05 | Capability decomposition against the capability graph | Not started |\n| AWU-06 | Candidate strategy representation + minimal generation | Not started |\n| AWU-07 | Strategy evaluation/selection | Not started |\n| AWU-08 | Action governance + execution/composition boundary (ACT/WAIT/ASK/SIMULATE) | Not started |\n| AWU-09 | Verification + result representation | Not started |\n| AWU-10 | Adaptation/re-plan/failure-recovery loop | Not started |\n| AWU-11 | Benchmark + baseline comparison + adversarial cases | Not started |\n| AWU-12 | Integration, quality gates, manifest/capability registration, final hardening | Not started |\n\nThis table is descriptive of the plan, not a commitment to exact scope\nor timing for each AWU — an AWU may be split into sub-AWUs as the build\nproceeds. See the MAGENAIS repository's `META_INTELLIGENCE_BUILD_PROMPT_V4.md`\nand `.mi/` control plane for the authoritative, current state of the\nbuild this package is produced from.\n", "./CHANGELOG.md": "# Changelog\n\nAll notable changes to this project will be documented in this file.\nFormat loosely follows [Keep a Changelog](https://keepachangelog.com/), and\nthis project uses [Semantic Versioning](https://semver.org/), independent\nof MAGENAIS's own version.\n\n## [Unreleased]\n\nNothing yet.\n\n## [0.1.0] — not yet released\n\nPrepared during the MAGENAIS V5 Meta-Intelligence build, AWU-01 through\nAWU-04. Not yet published as a GitHub repository — this is the working\nscaffold created alongside those AWUs.\n\n### Added\n\n- `MetaIntelligenceOrchestrator` (AWU-01): `intake()` records a caller's\n  problem statement verbatim under a task id, at stage `'received'`.\n  Bookkeeping-only (register/get/list, reject-on-duplicate id,\n  throw-on-missing lookup).\n- `understand()` (AWU-02): mechanical whitespace normalization of an\n  already-`'received'` task's statement, advancing it to `'understood'`.\n  The verbatim statement is read, never rewritten.\n- `addGoalsConstraints()` (AWU-03): records a caller's goals and\n  constraints against an already-`'understood'` task, advancing it to\n  `'goals-constraints'`. Each item is tagged with its origin (`'caller'`\n  vs `'extracted'`), and origins are never merged or silently rewritten\n  into each other.\n- `addEpistemicTracking()` (AWU-04): records a caller's knowns, unknowns,\n  assumptions, and evidence against an already-`'goals-constraints'`\n  task, advancing it to `'epistemic-tracking'`. Each of the four is\n  tracked as its own list, and every item is tagged with the same\n  `'caller'` / `'extracted'` origin used by goals/constraints — never\n  merged or silently rewritten into each other.\n- Contract types (`types.ts`): `MetaIntelligenceStage` (`'received'` |\n  `'understood'` | `'goals-constraints'` | `'epistemic-tracking'`),\n  `MetaIntelligenceProblem`, `MetaIntelligenceUnderstanding`,\n  `MetaIntelligenceOrigin`, `MetaIntelligenceGoalOrConstraint`,\n  `MetaIntelligenceGoalsConstraints`, `MetaIntelligenceEpistemicItem`,\n  `MetaIntelligenceEpistemicTracking`, `MetaIntelligenceTask`,\n  `MetaIntelligenceIntakeRequest`,\n  `MetaIntelligenceGoalOrConstraintInput`,\n  `MetaIntelligenceGoalsConstraintsRequest`,\n  `MetaIntelligenceEpistemicItemInput`,\n  `MetaIntelligenceEpistemicTrackingRequest`.\n- Unit tests covering: verbatim intake, empty/whitespace-only rejection,\n  generated vs. caller-supplied ids, duplicate-id rejection,\n  get/tryGet/list/size bookkeeping, whitespace normalization, a\n  not-found lookup, re-`understand()` rejection, goals/constraints\n  recording with origin tracking, empty goal/constraint text rejection,\n  out-of-order/re-call rejection for `addGoalsConstraints()`,\n  known/unknown/assumption/evidence recording with origin tracking,\n  empty epistemic-item text rejection, and out-of-order/re-call\n  rejection for `addEpistemicTracking()`, and independence between\n  separate orchestrator instances.\n- `model.json` manifest, Apache-2.0 `LICENSE`, `SECURITY.md`,\n  `CONTRIBUTING.md`.\n\n### Not yet implemented\n\nCapability decomposition, strategy generation/selection,\nexecution/composition, verification, and adaptation/re-plan — see\nREADME.md's Status table. Each is a later AWU in the MAGENAIS build.\n", "./examples/basic-usage.mjs": "// Runnable example: intake -> understand -> addGoalsConstraints ->\n// addEpistemicTracking.\n// Run with: npm run example\n// (node --experimental-strip-types examples/basic-usage.mjs)\n\nimport { MetaIntelligenceOrchestrator } from '../src/index.ts';\n\nconst orchestrator = new MetaIntelligenceOrchestrator();\n\nconst task = orchestrator.intake({\n  statement: 'Reduce   checkout\\n\\tdrop-off on mobile.',\n});\nconsole.log('stage after intake:', task.stage);\nconsole.log('verbatim statement:', JSON.stringify(task.problem.statement));\n\nconst understood = orchestrator.understand(task.id);\nconsole.log('stage after understand:', understood.stage);\nconsole.log('normalized statement:', JSON.stringify(understood.understanding.normalizedStatement));\nconsole.log('verbatim statement unchanged:', JSON.stringify(understood.problem.statement));\n\nconst withGoals = orchestrator.addGoalsConstraints(task.id, {\n  goals: [\n    { text: 'Increase mobile checkout completion rate', origin: 'caller' },\n    { text: 'Reduce steps in the mobile checkout funnel', origin: 'extracted' },\n  ],\n  constraints: [{ text: 'No changes to the payment provider', origin: 'caller' }],\n});\nconsole.log('stage after addGoalsConstraints:', withGoals.stage);\nconsole.log(\n  'goals:',\n  withGoals.goalsConstraints.goals.map((g) => `[${g.origin}] ${g.text}`)\n);\nconsole.log(\n  'constraints:',\n  withGoals.goalsConstraints.constraints.map((c) => `[${c.origin}] ${c.text}`)\n);\n\nconst withEpistemics = orchestrator.addEpistemicTracking(task.id, {\n  knowns: [{ text: 'Checkout has 5 steps today', origin: 'caller' }],\n  unknowns: [{ text: 'Which step causes the most drop-off', origin: 'extracted' }],\n  assumptions: [{ text: 'Mobile users behave like desktop users', origin: 'extracted' }],\n  evidence: [{ text: 'Analytics show 40% drop-off at step 3', origin: 'caller' }],\n});\nconsole.log('stage after addEpistemicTracking:', withEpistemics.stage);\nconsole.log(\n  'knowns:',\n  withEpistemics.epistemicTracking.knowns.map((k) => `[${k.origin}] ${k.text}`)\n);\nconsole.log(\n  'unknowns:',\n  withEpistemics.epistemicTracking.unknowns.map((u) => `[${u.origin}] ${u.text}`)\n);\nconsole.log(\n  'assumptions:',\n  withEpistemics.epistemicTracking.assumptions.map((a) => `[${a.origin}] ${a.text}`)\n);\nconsole.log(\n  'evidence:',\n  withEpistemics.epistemicTracking.evidence.map((e) => `[${e.origin}] ${e.text}`)\n);\n", "./tests/metaIntelligenceOrchestrator.test.ts": "/**\n * Independent-package copy of MAGENAIS's\n * tests/unit/metaIntelligenceOrchestrator.test.ts, kept in sync manually\n * (same relationship the sibling model repos' test copies have — see\n * this repo's CONTRIBUTING.md).\n *\n * AWU-01 + AWU-02 + AWU-03 + AWU-04: focused tests for the\n * Meta-Intelligence contract + thin orchestrator. Covers intake,\n * mechanical normalization (\"understand\"), goals/constraints\n * (\"addGoalsConstraints\"), and known/unknown/assumption/evidence\n * tracking (\"addEpistemicTracking\") only — no capability decomposition,\n * strategy generation/selection, execution, verification, or adaptation\n * exists yet to test.\n */\nimport { test } from 'node:test';\nimport assert from 'node:assert/strict';\nimport {\n  MetaIntelligenceOrchestrator,\n  EmptyProblemStatementError,\n  MetaIntelligenceTaskAlreadyExistsError,\n  MetaIntelligenceTaskNotFoundError,\n  MetaIntelligenceTaskNotAtReceivedStageError,\n  MetaIntelligenceTaskNotAtUnderstoodStageError,\n  EmptyGoalOrConstraintTextError,\n  MetaIntelligenceTaskNotAtGoalsConstraintsStageError,\n  EmptyEpistemicItemTextError,\n} from '../src/MetaIntelligenceOrchestrator.ts';\nimport type { MetaIntelligenceTask } from '../src/types.ts';\n\n/** Advance a fresh orchestrator's task straight to 'goals-constraints', for epistemic-tracking tests. */\nfunction taskAtGoalsConstraints(orchestrator: MetaIntelligenceOrchestrator, id = 'task-1'): void {\n  orchestrator.intake({ statement: 'Reduce checkout drop-off.', id });\n  orchestrator.understand(id);\n  orchestrator.addGoalsConstraints(id, { goals: [], constraints: [] });\n}\n\ntest('intake records the caller statement verbatim at the \"received\" stage', () => {\n  const orchestrator = new MetaIntelligenceOrchestrator();\n  const task = orchestrator.intake({ statement: '  Reduce checkout drop-off.  '.trim() });\n\n  assert.equal(task.problem.statement, 'Reduce checkout drop-off.');\n  assert.equal(task.stage, 'received');\n  assert.equal(typeof task.id, 'string');\n  assert.ok(task.id.length > 0);\n  assert.equal(typeof task.problem.receivedAt, 'string');\n  assert.ok(!Number.isNaN(Date.parse(task.problem.receivedAt)));\n});\n\ntest('intake trims whitespace-only statements and rejects them as empty', () => {\n  const orchestrator = new MetaIntelligenceOrchestrator();\n  assert.throws(() => orchestrator.intake({ statement: '   ' }), EmptyProblemStatementError);\n  assert.throws(() => orchestrator.intake({ statement: '' }), EmptyProblemStatementError);\n});\n\ntest('intake assigns distinct generated ids when none is supplied', () => {\n  const orchestrator = new MetaIntelligenceOrchestrator();\n  const a = orchestrator.intake({ statement: 'Problem A' });\n  const b = orchestrator.intake({ statement: 'Problem B' });\n  assert.notEqual(a.id, b.id);\n});\n\ntest('intake honors a caller-supplied id and rejects a duplicate', () => {\n  const orchestrator = new MetaIntelligenceOrchestrator();\n  const task = orchestrator.intake({ statement: 'Problem A', id: 'task-1' });\n  assert.equal(task.id, 'task-1');\n  assert.throws(\n    () => orchestrator.intake({ statement: 'Problem A again', id: 'task-1' }),\n    MetaIntelligenceTaskAlreadyExistsError\n  );\n});\n\ntest('getTask / tryGetTask / listTasks / size reflect tracked tasks', () => {\n  const orchestrator = new MetaIntelligenceOrchestrator();\n  assert.equal(orchestrator.size, 0);\n  assert.equal(orchestrator.tryGetTask('missing'), undefined);\n  assert.throws(() => orchestrator.getTask('missing'), MetaIntelligenceTaskNotFoundError);\n\n  const task = orchestrator.intake({ statement: 'Problem A', id: 'task-1' });\n  assert.equal(orchestrator.size, 1);\n  assert.deepEqual(orchestrator.getTask('task-1'), task);\n  assert.deepEqual(orchestrator.tryGetTask('task-1'), task);\n\n  const listed: MetaIntelligenceTask[] = orchestrator.listTasks();\n  assert.equal(listed.length, 1);\n  assert.deepEqual(listed[0], task);\n});\n\ntest('understand() collapses whitespace into a normalizedStatement without touching the verbatim problem', () => {\n  const orchestrator = new MetaIntelligenceOrchestrator();\n  const task = orchestrator.intake({ statement: 'Reduce   checkout\\n\\tdrop-off.', id: 'task-1' });\n  assert.equal(task.problem.statement, 'Reduce   checkout\\n\\tdrop-off.');\n  assert.equal(task.stage, 'received');\n  assert.equal(task.understanding, undefined);\n\n  const understood = orchestrator.understand('task-1');\n  assert.equal(understood.stage, 'understood');\n  assert.equal(understood.understanding?.normalizedStatement, 'Reduce checkout drop-off.');\n  // The verbatim statement is unchanged.\n  assert.equal(understood.problem.statement, 'Reduce   checkout\\n\\tdrop-off.');\n  assert.ok(!Number.isNaN(Date.parse(understood.understanding!.understoodAt)));\n\n  // getTask reflects the update.\n  assert.deepEqual(orchestrator.getTask('task-1'), understood);\n});\n\ntest('understand() throws MetaIntelligenceTaskNotFoundError for an unknown id', () => {\n  const orchestrator = new MetaIntelligenceOrchestrator();\n  assert.throws(() => orchestrator.understand('missing'), MetaIntelligenceTaskNotFoundError);\n});\n\ntest('understand() rejects a task that is not at the \"received\" stage', () => {\n  const orchestrator = new MetaIntelligenceOrchestrator();\n  orchestrator.intake({ statement: 'Problem A', id: 'task-1' });\n  orchestrator.understand('task-1');\n  assert.throws(\n    () => orchestrator.understand('task-1'),\n    MetaIntelligenceTaskNotAtReceivedStageError\n  );\n});\n\ntest('addGoalsConstraints() records goals/constraints with origin and advances to \"goals-constraints\"', () => {\n  const orchestrator = new MetaIntelligenceOrchestrator();\n  orchestrator.intake({ statement: 'Reduce checkout drop-off.', id: 'task-1' });\n  orchestrator.understand('task-1');\n\n  const updated = orchestrator.addGoalsConstraints('task-1', {\n    goals: [\n      { text: 'Increase checkout completion rate', origin: 'caller' },\n      { text: 'Improve funnel conversion', origin: 'extracted' },\n    ],\n    constraints: [{ text: 'No changes to the payment provider', origin: 'caller' }],\n  });\n\n  assert.equal(updated.stage, 'goals-constraints');\n  assert.equal(updated.goalsConstraints?.goals.length, 2);\n  assert.equal(updated.goalsConstraints?.goals[0].text, 'Increase checkout completion rate');\n  assert.equal(updated.goalsConstraints?.goals[0].origin, 'caller');\n  assert.equal(updated.goalsConstraints?.goals[1].origin, 'extracted');\n  assert.equal(updated.goalsConstraints?.constraints.length, 1);\n  assert.equal(updated.goalsConstraints?.constraints[0].origin, 'caller');\n  assert.ok(!Number.isNaN(Date.parse(updated.goalsConstraints!.recordedAt)));\n\n  // Every item gets a stable, unique id.\n  const ids = [...updated.goalsConstraints!.goals, ...updated.goalsConstraints!.constraints].map((g) => g.id);\n  assert.equal(new Set(ids).size, ids.length);\n\n  // AWU-01/AWU-02 state remains unchanged and readable.\n  assert.equal(updated.problem.statement, 'Reduce checkout drop-off.');\n  assert.equal(updated.understanding?.normalizedStatement, 'Reduce checkout drop-off.');\n\n  // getTask reflects the update.\n  assert.deepEqual(orchestrator.getTask('task-1'), updated);\n});\n\ntest('addGoalsConstraints() keeps caller and extracted items separate, never merging them', () => {\n  const orchestrator = new MetaIntelligenceOrchestrator();\n  orchestrator.intake({ statement: 'Reduce checkout drop-off.', id: 'task-1' });\n  orchestrator.understand('task-1');\n\n  const updated = orchestrator.addGoalsConstraints('task-1', {\n    goals: [\n      { text: 'Same wording', origin: 'caller' },\n      { text: 'Same wording', origin: 'extracted' },\n    ],\n    constraints: [],\n  });\n\n  assert.equal(updated.goalsConstraints?.goals.length, 2);\n  assert.notEqual(updated.goalsConstraints?.goals[0].id, updated.goalsConstraints?.goals[1].id);\n  assert.equal(updated.goalsConstraints?.goals[0].origin, 'caller');\n  assert.equal(updated.goalsConstraints?.goals[1].origin, 'extracted');\n});\n\ntest('addGoalsConstraints() rejects an empty/whitespace-only goal or constraint text', () => {\n  const orchestrator = new MetaIntelligenceOrchestrator();\n  orchestrator.intake({ statement: 'Problem A', id: 'task-1' });\n  orchestrator.understand('task-1');\n\n  assert.throws(\n    () => orchestrator.addGoalsConstraints('task-1', { goals: [{ text: '   ', origin: 'caller' }], constraints: [] }),\n    EmptyGoalOrConstraintTextError\n  );\n  assert.throws(\n    () => orchestrator.addGoalsConstraints('task-1', { goals: [], constraints: [{ text: '', origin: 'extracted' }] }),\n    EmptyGoalOrConstraintTextError\n  );\n\n  // A rejected call must not have advanced the stage.\n  assert.equal(orchestrator.getTask('task-1').stage, 'understood');\n});\n\ntest('addGoalsConstraints() throws MetaIntelligenceTaskNotFoundError for an unknown id', () => {\n  const orchestrator = new MetaIntelligenceOrchestrator();\n  assert.throws(\n    () => orchestrator.addGoalsConstraints('missing', { goals: [], constraints: [] }),\n    MetaIntelligenceTaskNotFoundError\n  );\n});\n\ntest('addGoalsConstraints() rejects a task that is not at the \"understood\" stage', () => {\n  const orchestrator = new MetaIntelligenceOrchestrator();\n  orchestrator.intake({ statement: 'Problem A', id: 'task-1' });\n\n  // Still at 'received' — understand() has not run yet.\n  assert.throws(\n    () => orchestrator.addGoalsConstraints('task-1', { goals: [], constraints: [] }),\n    MetaIntelligenceTaskNotAtUnderstoodStageError\n  );\n\n  orchestrator.understand('task-1');\n  orchestrator.addGoalsConstraints('task-1', { goals: [], constraints: [] });\n\n  // Already at 'goals-constraints' — calling again must be rejected.\n  assert.throws(\n    () => orchestrator.addGoalsConstraints('task-1', { goals: [], constraints: [] }),\n    MetaIntelligenceTaskNotAtUnderstoodStageError\n  );\n});\n\ntest('two orchestrator instances track tasks independently', () => {\n  const first = new MetaIntelligenceOrchestrator();\n  const second = new MetaIntelligenceOrchestrator();\n  first.intake({ statement: 'Only in first', id: 'task-1' });\n  assert.equal(first.size, 1);\n  assert.equal(second.size, 0);\n});\n\ntest('addEpistemicTracking() records knowns/unknowns/assumptions/evidence with origin and advances to \"epistemic-tracking\"', () => {\n  const orchestrator = new MetaIntelligenceOrchestrator();\n  taskAtGoalsConstraints(orchestrator);\n\n  const updated = orchestrator.addEpistemicTracking('task-1', {\n    knowns: [{ text: 'Checkout has 5 steps today', origin: 'caller' }],\n    unknowns: [{ text: 'Which step causes the most drop-off', origin: 'extracted' }],\n    assumptions: [{ text: 'Mobile users behave like desktop users', origin: 'extracted' }],\n    evidence: [{ text: 'Analytics show 40% drop-off at step 3', origin: 'caller' }],\n  });\n\n  assert.equal(updated.stage, 'epistemic-tracking');\n  assert.equal(updated.epistemicTracking?.knowns.length, 1);\n  assert.equal(updated.epistemicTracking?.knowns[0].origin, 'caller');\n  assert.equal(updated.epistemicTracking?.unknowns.length, 1);\n  assert.equal(updated.epistemicTracking?.unknowns[0].origin, 'extracted');\n  assert.equal(updated.epistemicTracking?.assumptions.length, 1);\n  assert.equal(updated.epistemicTracking?.evidence.length, 1);\n  assert.ok(!Number.isNaN(Date.parse(updated.epistemicTracking!.recordedAt)));\n\n  // Every item gets a stable, unique id.\n  const ids = [\n    ...updated.epistemicTracking!.knowns,\n    ...updated.epistemicTracking!.unknowns,\n    ...updated.epistemicTracking!.assumptions,\n    ...updated.epistemicTracking!.evidence,\n  ].map((item) => item.id);\n  assert.equal(new Set(ids).size, ids.length);\n\n  // AWU-01/AWU-02/AWU-03 state remains unchanged and readable.\n  assert.equal(updated.problem.statement, 'Reduce checkout drop-off.');\n  assert.equal(updated.understanding?.normalizedStatement, 'Reduce checkout drop-off.');\n  assert.deepEqual(updated.goalsConstraints?.goals, []);\n\n  // getTask reflects the update.\n  assert.deepEqual(orchestrator.getTask('task-1'), updated);\n});\n\ntest('addEpistemicTracking() keeps caller and extracted items separate, never merging them', () => {\n  const orchestrator = new MetaIntelligenceOrchestrator();\n  taskAtGoalsConstraints(orchestrator);\n\n  const updated = orchestrator.addEpistemicTracking('task-1', {\n    knowns: [\n      { text: 'Same wording', origin: 'caller' },\n      { text: 'Same wording', origin: 'extracted' },\n    ],\n    unknowns: [],\n    assumptions: [],\n    evidence: [],\n  });\n\n  assert.equal(updated.epistemicTracking?.knowns.length, 2);\n  assert.notEqual(updated.epistemicTracking?.knowns[0].id, updated.epistemicTracking?.knowns[1].id);\n  assert.equal(updated.epistemicTracking?.knowns[0].origin, 'caller');\n  assert.equal(updated.epistemicTracking?.knowns[1].origin, 'extracted');\n});\n\ntest('addEpistemicTracking() rejects an empty/whitespace-only item text in any category', () => {\n  const orchestrator = new MetaIntelligenceOrchestrator();\n  taskAtGoalsConstraints(orchestrator);\n\n  assert.throws(\n    () =>\n      orchestrator.addEpistemicTracking('task-1', {\n        knowns: [{ text: '   ', origin: 'caller' }],\n        unknowns: [],\n        assumptions: [],\n        evidence: [],\n      }),\n    EmptyEpistemicItemTextError\n  );\n  assert.throws(\n    () =>\n      orchestrator.addEpistemicTracking('task-1', {\n        knowns: [],\n        unknowns: [],\n        assumptions: [],\n        evidence: [{ text: '', origin: 'extracted' }],\n      }),\n    EmptyEpistemicItemTextError\n  );\n\n  // A rejected call must not have advanced the stage.\n  assert.equal(orchestrator.getTask('task-1').stage, 'goals-constraints');\n});\n\ntest('addEpistemicTracking() throws MetaIntelligenceTaskNotFoundError for an unknown id', () => {\n  const orchestrator = new MetaIntelligenceOrchestrator();\n  assert.throws(\n    () => orchestrator.addEpistemicTracking('missing', { knowns: [], unknowns: [], assumptions: [], evidence: [] }),\n    MetaIntelligenceTaskNotFoundError\n  );\n});\n\ntest('addEpistemicTracking() rejects a task that is not at the \"goals-constraints\" stage', () => {\n  const orchestrator = new MetaIntelligenceOrchestrator();\n  orchestrator.intake({ statement: 'Problem A', id: 'task-1' });\n  orchestrator.understand('task-1');\n\n  // Still at 'understood' — addGoalsConstraints() has not run yet.\n  assert.throws(\n    () => orchestrator.addEpistemicTracking('task-1', { knowns: [], unknowns: [], assumptions: [], evidence: [] }),\n    MetaIntelligenceTaskNotAtGoalsConstraintsStageError\n  );\n\n  orchestrator.addGoalsConstraints('task-1', { goals: [], constraints: [] });\n  orchestrator.addEpistemicTracking('task-1', { knowns: [], unknowns: [], assumptions: [], evidence: [] });\n\n  // Already at 'epistemic-tracking' — calling again must be rejected.\n  assert.throws(\n    () => orchestrator.addEpistemicTracking('task-1', { knowns: [], unknowns: [], assumptions: [], evidence: [] }),\n    MetaIntelligenceTaskNotAtGoalsConstraintsStageError\n  );\n});\n"}</script>
+<div class="doc-modal-backdrop" id="docModal" role="dialog" aria-modal="true" aria-labelledby="docModalTitle" onclick="if (event.target === this) closeDocModal();">
+<div class="doc-modal">
+<div class="doc-modal-head">
+<div class="doc-modal-head-text">
+<span class="doc-modal-eyebrow">Viewing file</span>
+<span class="doc-modal-title" id="docModalTitle">Document</span>
+</div>
+<div class="doc-modal-actions">
+<a class="doc-modal-raw" id="docModalRaw" href="#" target="_blank" rel="noopener">Open raw</a>
+<button type="button" class="doc-modal-close" onclick="closeDocModal()" aria-label="Close">&times;</button>
+</div>
+</div>
+<div class="doc-modal-body" id="docModalBody"><p class="doc-modal-status">Loading&hellip;</p></div>
+</div>
+</div>
+<script>
+(function () {
+  var __docDataEl = document.getElementById('__doc_data__');
+  window.__DOC_DATA__ = __docDataEl ? JSON.parse(__docDataEl.textContent) : {};
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function mdToHtml(md) {
+    var codeBlocks = [];
+    var html = md.replace(/```[a-zA-Z0-9]*\n([\s\S]*?)```/g, function (m, code) {
+      codeBlocks.push('<pre><code>' + escapeHtml(code.replace(/\n$/, '')) + '</code></pre>');
+      return '\u0000' + (codeBlocks.length - 1) + '\u0000';
+    });
+    html = escapeHtml(html);
+    html = html
+      .replace(/^###### (.*)$/gm, '<h6>$1</h6>')
+      .replace(/^##### (.*)$/gm, '<h5>$1</h5>')
+      .replace(/^#### (.*)$/gm, '<h4>$1</h4>')
+      .replace(/^### (.*)$/gm, '<h3>$1</h3>')
+      .replace(/^## (.*)$/gm, '<h2>$1</h2>')
+      .replace(/^# (.*)$/gm, '<h1>$1</h1>');
+    html = html
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/(^|[^*])\*([^*]+)\*(?!\*)/g, '$1<em>$2</em>')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    html = html.replace(/(^|\n)[-*] (.*)/g, function (m, pre, text) { return pre + '<li>' + text + '</li>'; });
+    html = html.replace(/(<li>[\s\S]*?<\/li>\n?)+/g, function (m) { return '<ul>' + m + '</ul>'; });
+    html = html.split(/\n{2,}/).map(function (block) {
+      block = block.trim();
+      if (block === '') return '';
+      if (/^<(h\d|ul|pre|table)/.test(block)) return block;
+      return '<p>' + block.replace(/\n/g, '<br>') + '</p>';
+    }).join('\n');
+    html = html.replace(/\u0000(\d+)\u0000/g, function (m, i) { return codeBlocks[parseInt(i, 10)]; });
+    return html;
+  }
+  function renderDoc(body, url, text) {
+    if (/\.(md|markdown)$/i.test(url)) {
+      body.innerHTML = mdToHtml(text);
+    } else {
+      body.innerHTML = '<pre><code>' + escapeHtml(text) + '</code></pre>';
+    }
+  }
+  window.openDocModal = function (url, title) {
+    var backdrop = document.getElementById('docModal');
+    var body = document.getElementById('docModalBody');
+    var titleEl = document.getElementById('docModalTitle');
+    var rawEl = document.getElementById('docModalRaw');
+    titleEl.textContent = title || url;
+    rawEl.href = url;
+    backdrop.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    // Every linked file is embedded directly in this page at build time (see the
+    // __DOC_DATA__ JSON block below), so viewing it here never depends on fetch() —
+    // which browsers block for local file:// pages and which would otherwise be the
+    // only way this worked. fetch() below is kept purely as a fallback for any URL
+    // that was not embedded (e.g. an external link opened in the viewer by mistake).
+    var embedded = window.__DOC_DATA__ && Object.prototype.hasOwnProperty.call(window.__DOC_DATA__, url)
+      ? window.__DOC_DATA__[url] : null;
+    if (embedded !== null) {
+      renderDoc(body, url, embedded);
+      return;
+    }
+    body.innerHTML = '<p class="doc-modal-status">Loading&hellip;</p>';
+    fetch(url, { cache: 'no-store' })
+      .then(function (res) { if (!res.ok) throw new Error('fetch failed'); return res.text(); })
+      .then(function (text) { renderDoc(body, url, text); })
+      .catch(function () {
+        body.innerHTML = '<p class="doc-modal-status">This file could not be loaded here &mdash; <a href="' + url + '" target="_blank" rel="noopener">open it directly</a> instead.</p>';
+      });
+  };
+  window.closeDocModal = function () {
+    document.getElementById('docModal').classList.remove('open');
+    document.body.style.overflow = '';
+  };
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeDocModal();
+  });
+  document.querySelectorAll('a[data-doc]').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      openDocModal(a.getAttribute('href'), a.getAttribute('data-doc-title') || a.textContent.trim());
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
