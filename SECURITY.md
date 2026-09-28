@@ -2,45 +2,28 @@
 
 ## Scope
 
-Meta-Intelligence, at its current version, is a pure in-memory
-bookkeeping package: it accepts a JSON-serializable problem statement,
-stores it in a `Map` keyed by task id, and derives a normalized view of
-it. It:
+Meta-Intelligence 2.0.0 is a pure in-memory bookkeeping library. It accepts JSON-serializable inputs, stores tasks in a `Map`, and derives
+views from them. It performs no network I/O, no file I/O, has zero runtime dependencies, and never `eval()`s or executes anything in its input.
+It does not execute plans or decisions either: an `ACT` boundary or execution plan is data.
 
-- performs no network I/O,
-- performs no file system I/O,
-- has zero runtime dependencies,
-- does not `eval()` or otherwise execute code contained in its input.
+## Reporting a vulnerability
 
-This significantly limits its attack surface, but the points below still
-apply.
+Open a private security advisory on this repository (GitHub → Security → Advisories → "Report a vulnerability") rather than a public issue. Include the
+triggering input, observed vs expected behaviour, and the version (`model.json` → `version`).
 
-## Reporting a Vulnerability
+## Supported versions
 
-If you believe you've found a security issue in this repository, please
-open a private security advisory on this repository (GitHub → Security →
-Advisories → "Report a vulnerability") rather than a public issue.
+Only the latest 2.x release.
 
-Please include:
+## Known limitations relevant to security
 
-- the input that triggers the issue,
-- the observed vs. expected behavior,
-- the package version (`model.json` → `version`).
+- Tasks are held in memory for the lifetime of the instance, with no eviction, expiry or size cap. A long-running service accepting untrusted,
+  high-volume intake must impose its own limits.
+- Caller-supplied task ids are plain `Map` keys, validated for presence only. Bound length and content yourself if ids come from untrusted input.
+- Text fields are stored verbatim (trimmed). If you render them in HTML, escape them.
+- DecisionScore perturbation cost grows with options × criteria × trials. Bound `scorerOptions.perturbationTrials` if those values come from untrusted input.
+- There is no authentication or authorization: anyone holding an orchestrator instance can read and advance every task in it.
 
-## Supported Versions
+## Repository hygiene
 
-Only the latest published `0.x` release is actively supported while this
-package is pre-1.0.
-
-## Known Limitations Relevant to Security
-
-- `MetaIntelligenceOrchestrator` holds every intake task in memory for
-  the lifetime of the instance — there is no eviction, expiry, or size
-  cap. A caller embedding this package in a long-running service that
-  accepts untrusted, high-volume intake should impose its own limits
-  (max tasks per instance, periodic eviction) rather than relying on
-  this package to do so.
-- A caller-supplied task `id` (via `MetaIntelligenceIntakeRequest.id`) is
-  used as a plain `Map` key; it is not validated for length or content
-  beyond presence. Callers accepting `id` directly from untrusted input
-  should apply their own bounds.
+The repository contains no credentials, API keys or machine-specific paths. `tests/api.test.ts` and the release audit check import paths; `.gitignore` excludes `.env*`, logs and archives.

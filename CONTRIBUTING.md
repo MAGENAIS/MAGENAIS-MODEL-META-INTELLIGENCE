@@ -4,94 +4,49 @@ Thanks for your interest in contributing.
 
 ## Getting started
 
-This package has **zero runtime dependencies** and needs no install step
-to develop:
-
 ```bash
 git clone https://github.com/MAGENAIS/MAGENAIS-MODEL-META-INTELLIGENCE.git
 cd MAGENAIS-MODEL-META-INTELLIGENCE
-npm test          # node --experimental-strip-types --test tests/*.test.ts
-npm run example   # runs examples/basic-usage.mjs
+npm install        # dev tooling only (typescript, @types/node)
+npm run check      # typecheck + tests + benchmark
 ```
 
-Requires Node.js >= 22 (for `--experimental-strip-types`).
+`npm test` and `npm run examples` need no install. Requires Node.js ≥ 22.6 (built-in type stripping; there is no build step).
 
-## Project layout
+## Layout
 
 ```
-src/
-  contract.ts                    Self-contained ModelManifest shape (see that file's own note on why it's partial)
-  types.ts                       Meta-Intelligence contract: stages, task, problem, understanding
-  MetaIntelligenceOrchestrator.ts Thin orchestrator: intake() + understand()
-  index.ts                       Public exports
-tests/                            node:test unit tests
-examples/                         Runnable usage examples
-docs/                             Pipeline/roadmap notes
+src/index.ts                         public API (explicit exports only)
+src/MetaIntelligenceOrchestrator.ts  the orchestrator and all typed errors
+src/types.ts  src/contract.ts        task/strategy/plan/trace types; shared shapes
+src/manifest.ts  src/version.ts      manifest source of model.json; version constants
+src/scoring/                         vendored DecisionScore algorithm + default scorer
+src/benchmark/                       engine, 51-case pipeline benchmark, guard ablations
+tests/  examples/  docs/  scripts/  schemas/
 ```
-
-## Relationship to the MAGENAIS monorepo
-
-This repository is kept in sync **by hand** with
-`MAGENAIS-main/src/ModelsHub/meta-intelligence/` and
-`MAGENAIS-main/tests/unit/metaIntelligenceOrchestrator.test.ts` in the
-MAGENAIS repository — the same relationship DecisionScore's, PatternSense's,
-and AnomalyMind's own standalone repos have with their MAGENAIS-main
-sources. If you change one copy, change the other in the same PR/commit;
-each file that's a copy says so in its own header comment.
 
 ## Ground rules
 
-- **No runtime dependencies.** This package intentionally stays
-  dependency-free. If a contribution needs one, open an issue to discuss
-  first.
-- **Don't get ahead of the AWU queue.** This package is built one Atomic
-  Work Unit (AWU) at a time (see the MAGENAIS repository's
-  `META_INTELLIGENCE_BUILD_PROMPT_V4.md` and `.mi/CONTEXT_MAP.json`). A
-  PR that implements a pipeline stage (goals/constraints, strategy
-  generation, execution, ...) ahead of its AWU will be asked to split or
-  wait, even if the code looks correct — see that build prompt's "no
-  phase/round-explosion" and "hard guards" sections.
-- **`understand()` stays mechanical.** Whitespace collapsing only. Any
-  change that starts inferring meaning, goals, or constraints from the
-  problem statement belongs in a later stage's own file (AWU-02+),
-  not folded into `understand()`.
-- **Never rewrite `problem.statement`.** Provenance — what the caller
-  actually said — must remain readable and unmodified from every later
-  stage. Add new fields alongside it; never replace it.
-- **No TypeScript constructor parameter properties**
-  (`constructor(private readonly x: T)`). The test runner uses Node's
-  `--experimental-strip-types`, which does not support that syntax. Use a
-  plain field declaration + assignment in the constructor body instead.
-- **Every behavior change needs a test.** In particular, a new stage
-  method should include tests for its happy path, its rejection of an
-  out-of-order call, and (once relevant) a not-found case.
-- **No novelty/capability overclaiming.** `model.json`'s `capabilities`
-  and this README's Status table must reflect what's actually
-  implemented, not what's planned — see the MAGENAIS build prompt's hard
-  guard: "Do not invent facts, evidence, capabilities, ... or benchmark
-  results."
-- **Export each name from exactly one file in `index.ts`.** A name may
-  only be exported once across the files `index.ts` re-exports via
-  `export *`. Two files exporting the same name causes an ambiguous
-  re-export (`tsc` error TS2308).
+- **No runtime dependencies.** `dependencies` must stay empty (a test enforces it).
+- **Isolation.** No import may leave the package or reference MAGENAIS paths (a test enforces it).
+- **Keep the public API intentional.** Adding or removing an export or orchestrator method fails `tests/api.test.ts`; update that snapshot and `docs/api.md` in the same change.
+- **One version.** Bump `src/version.ts`, `package.json`, then run `npm run manifest:sync` and `npm run html:sync`; add a `CHANGELOG.md` entry. `tests/versioning.test.ts` catches drift.
+- **`model.json` is generated.** Edit `src/manifest.ts`, never `model.json` by hand.
+- **No overclaiming.** Docs, manifest and HTML must describe what exists and passes tests. Do not describe plans or decisions as execution. Do not add benchmark numbers that `npm run benchmark` cannot reproduce.
+- **The component records; the caller decides.** Do not add logic that invents goals, evidence, strategies or governance decisions.
+- **Never rewrite `problem.statement`.** Add fields beside it.
+- **Benchmark cases are frozen.** Changing a case changes the fingerprint test on purpose; bump the benchmark version and update the fingerprint deliberately.
+- **No TypeScript constructor parameter properties** (unsupported by Node's type stripping); use explicit fields.
+- **Every behaviour change needs a test**: happy path, rejection path, and a not-found case where relevant.
 
-## Reporting bugs / requesting features
+## Relationship to the MAGENAIS monorepo
 
-Open a GitHub issue with:
-
-- the input that produced the unexpected result (or the feature request),
-- what you expected vs. what happened,
-- the package version.
+The orchestrator, types and benchmark originate in MAGENAIS (`src/ModelsHub/meta-intelligence/`). This repository is the
+standalone release and is kept in sync deliberately, not automatically. A behaviour change in one copy must be made in the other,
+or the difference must be documented in `docs/integration.md`. See that file for what is shared and what is not.
 
 ## Pull requests
 
-1. Fork and branch from `main`.
-2. Add/update tests for your change.
-3. Run `npm test` — it must pass with zero failures.
-4. Update `CHANGELOG.md` under an "Unreleased" heading.
-5. Open a PR describing the change and why it's needed.
+1. Branch from `main`. 2. Add/update tests. 3. `npm run check` must pass with zero failures. 4. Update `CHANGELOG.md`. 5. Describe what and why.
 
-## Code of Conduct
-
-Be respectful and constructive. Disagreements about approach are fine and
-expected in a research-oriented project; personal attacks are not.
+Be respectful and constructive.

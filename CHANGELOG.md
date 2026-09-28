@@ -1,11 +1,48 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
-Format loosely follows [Keep a Changelog](https://keepachangelog.com/), and
-this project uses [Semantic Versioning](https://semver.org/), independent
-of MAGENAIS's own version.
+All notable changes to this project are documented here. Format loosely follows
+[Keep a Changelog](https://keepachangelog.com/); versioning follows [SemVer](https://semver.org/), independent of MAGENAIS's own version.
 
-## [Unreleased]
+## Documentation update: Models Hub sync (2.0.0 unchanged; no code or behaviour change)
+
+- README and docs describe the Models Hub relationship: listed in the MAGENAIS-MODELS catalog and shown in the Models Hub as an information-only entry (no Run panel), not registered in `ModelRegistry`.
+- The MAGENAIS-integrated manifest was brought to V2 (version, uri, description, outputs, limitations, provenance); `runtimes` remains the only difference.
+
+## [2.0.0] Meta-Intelligence V2 standalone release
+
+First release that identifies as **V2**. The standalone repository was synchronized with the validated MAGENAIS V2
+implementation (V5-6 phases A–D). Versions before this were internal pre-releases (`0.1.0`, V1 only).
+
+### Added
+- V2 cognitive layer: `generateStrategies`, `generateStrategyAlternatives`, `evaluateStrategyOptions`, `authorizeComposition`,
+  `buildExecutionPlan`, `recordExecutionOutcome`, `recordExecutionAdaptation`, `getProblemRepresentation`, `getCognitiveTrace`,
+  with 43 typed errors (up from the V1 set).
+- Bundled default scorer (`scoreWithDecisionScore`) and the vendored DecisionScore algorithm in `src/scoring/`, matching the
+  MAGENAIS default so V2 behaviour is identical without MAGENAIS installed.
+- Explicit public API in `src/index.ts`, a `./benchmark` subpath, `META_INTELLIGENCE_VERSION/MODEL_ID/URI`, and `META_INTELLIGENCE_MANIFEST`.
+- `src/manifest.ts` as the single manifest source; `model.json` generated from it; vendored MAGENAIS manifest schema and a dependency-free validator.
+- 51-case pipeline benchmark (v1.2.0) with fingerprint pinning, and 9 fail-open guard ablations; `npm run benchmark`.
+- Nine runnable V2 examples; new tests for API surface, manifest, versioning, end-to-end V2 path, examples and the HTML page.
+- Documentation rewrite (README, MODEL_SPECIFICATION, architecture, API, integration, testing/benchmarks, roadmap), RELEASE_NOTES, HANDOFF, release audit.
+- `tsconfig.json`, `.gitignore`, `package.json` scripts and `exports` map.
+
+### Changed
+- `package.json`/`model.json`/URI/provenance: `0.1.0` → `2.0.0`.
+- Manifest `runtimes`: `['embedded-library']` (the MAGENAIS-integrated manifest uses `[]`, which the published schema rejects); V2-accurate description, outputs, limitations, provenance. See `docs/integration.md`.
+- `contract.ts` now defines the DecisionScore I/O shapes and `CapabilityGraphLike` itself.
+- `index.html` rewritten for V2, and made self-contained (no external font or script requests; console-clean); its embedded documents are regenerated from the real files (`npm run html:sync`).
+- Tests reorganized and extended; legacy V1-only test file replaced by its strict superset.
+
+### Removed
+- `examples/basic-usage.mjs` (V1-only), replaced by the nine numbered examples.
+- Stale V1 claims ("not yet implemented", "eleven stages", AWU status) from all documentation.
+
+### Not changed
+- Architecture, V1 frozen behaviour, and any V2 behaviour relative to the validated MAGENAIS implementation.
+
+## [0.1.0] Pre-release: V1 pipeline (historical, AWU-01..AWU-10)
+
+These entries describe the V1 state that preceded V2. They are kept as history; behaviour is unchanged in 2.0.0.
 
 ### Added
 

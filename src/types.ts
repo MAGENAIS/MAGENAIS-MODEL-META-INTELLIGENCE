@@ -1,12 +1,5 @@
 /**
- * types.ts (Meta-Intelligence — standalone package copy)
- *
- * Kept in sync by hand with
- * `MAGENAIS-main/src/ModelsHub/meta-intelligence/types.ts` (see that
- * file's own header for why this repo exists and how it relates to
- * MAGENAIS-main), so this package has zero dependency on MAGENAIS
- * itself. Do not let this drift silently — if the MAGENAIS-main version
- * changes, update this copy in the same change.
+ * types.ts (Meta-Intelligence)
  *
  * AWU-01. The smallest real contract for Meta-Intelligence (V5-5): pure
  * data shapes only, following the split already established between
@@ -139,7 +132,7 @@ import type {
   DecisionScoreMatrix,
   DecisionScoreOutput,
   DecisionScoreRunOptions,
-} from './contract';
+} from './contract.ts';
 
 
 /** A Meta-Intelligence task's current position in the DoD pipeline above. */
@@ -343,6 +336,124 @@ export interface MetaIntelligenceCandidateStrategies {
   readonly generatedAt: string;
 }
 
+/**
+ * V2-B1: one component of a `MetaIntelligenceStrategy` — the requirement
+ * it addresses, carried the same way `MetaIntelligenceCandidateStrategy`
+ * already does. This is deliberately the same shape as
+ * `MetaIntelligenceCandidateStrategy` minus its `id`: a strategy owns its
+ * own id, and a component is not independently addressable outside the
+ * strategy it belongs to.
+ */
+export interface MetaIntelligenceStrategyComponent {
+  /** Id of the `MetaIntelligenceCapabilityRequirement` (AWU-05) this component addresses. */
+  readonly requirementId: string;
+  /** That requirement's capability tag, copied verbatim for readability. */
+  readonly capability: string;
+  /** Copy of that requirement's `providers`, at the moment this component was built. Never empty. */
+  readonly providers: readonly string[];
+}
+
+/**
+ * V2-B1: how many requirements a `MetaIntelligenceStrategy` composes.
+ * Mechanically derived from `components.length` (`1` -> `'single-requirement'`,
+ * `>1` -> `'composed'`) wherever this type is constructed — never a
+ * caller-supplied or inferred judgement, consistent with this build's
+ * established "no invented scores/labels" precedent (Law E). `0` is not
+ * representable: a strategy with no components is not a strategy (see
+ * `MetaIntelligenceStrategy.components`).
+ */
+export type MetaIntelligenceStrategyDerivation = 'single-requirement' | 'composed';
+
+/**
+ * V2-B1 (Phase B — Cognitive Strategy Engine): the data shape for a real
+ * strategy, distinct from `MetaIntelligenceCandidateStrategy`. A V1/AWU-06
+ * candidate is exactly one satisfied capability requirement aliased
+ * one-for-one — this is the concrete gap V2-A1's readiness gate flagged as
+ * G3 FAIL ("not real alternatives"). A `MetaIntelligenceStrategy` composes
+ * one OR MORE requirement-derived `MetaIntelligenceStrategyComponent`s into
+ * a single named approach, so a future generator (V2-B2) has a real shape
+ * to build multi-capability strategies into instead of continuing to alias
+ * requirements one-for-one. `components` is never empty — a strategy
+ * addresses at least one requirement.
+ *
+ * This type is data-model-only as of V2-B1: nothing in
+ * `MetaIntelligenceOrchestrator` constructs, stores, or returns one yet
+ * (that is V2-B2's job), and `MetaIntelligenceTask`/`MetaIntelligenceStage`
+ * are unchanged. There is intentionally no score, rank, priority,
+ * confidence, or `selected` field here either — mirroring
+ * `MetaIntelligenceCandidateStrategy`'s own "evaluation is a later stage's
+ * job" convention (AWU-06/V2-A1 G3-G5). There is also no `origin` field:
+ * per the existing candidate precedent, provenance stays on the referenced
+ * requirement rather than being re-declared on the composing shape.
+ */
+export interface MetaIntelligenceStrategy {
+  /** Stable id for this strategy, unique within the task that generated it (`'strategy-N'`, mirroring `MetaIntelligenceCandidateStrategy`'s id convention). */
+  readonly id: string;
+  /** One or more components this strategy composes. Never empty. */
+  readonly components: readonly MetaIntelligenceStrategyComponent[];
+  /** Mechanically derived from `components.length`. See `MetaIntelligenceStrategyDerivation`. */
+  readonly derivation: MetaIntelligenceStrategyDerivation;
+}
+
+/**
+ * V2-B2: the "Strategy Generation" output — a set of real
+ * `MetaIntelligenceStrategy` values for a task, additive alongside (never
+ * replacing) the frozen V1 `MetaIntelligenceCandidateStrategies`.
+ * Deliberately the same shape as `MetaIntelligenceCandidateStrategies` (a
+ * `readonly` list plus a `generatedAt` timestamp) for a consistent feel,
+ * holding `MetaIntelligenceStrategy` values instead of
+ * `MetaIntelligenceCandidateStrategy` values. See
+ * `MetaIntelligenceOrchestrator.generateStrategies()` for how this is
+ * produced -- as of V2-B2, one `'single-requirement'` strategy per
+ * satisfied capability requirement, mirroring
+ * `generateCandidateStrategies()`'s own satisfied-only rule. Composed,
+ * multi-requirement strategies remain representable by the underlying
+ * `MetaIntelligenceStrategy` type (V2-B1) but are not yet generated here
+ * -- that is V2-B3's job.
+ */
+export interface MetaIntelligenceStrategies {
+  readonly strategies: readonly MetaIntelligenceStrategy[];
+  /** ISO-8601 timestamp of when the strategies were generated. */
+  readonly generatedAt: string;
+}
+
+/**
+ * V2-B3: the "Strategy Alternatives / Diversity" output -- real
+ * alternative and/or composed `MetaIntelligenceStrategy` values, additive
+ * alongside (never replacing) V2-B2's `strategies` field. Addresses
+ * V2-A1's G3 FAIL finding ("candidates are not real alternatives") for
+ * real, using only data that already varies at `'capability-decomposition'`
+ * time -- nothing invented:
+ *
+ * - a `'single-requirement'` alternative strategy for every provider of a
+ *   satisfied requirement BEYOND the first (a genuinely different
+ *   provider satisfying the same capability is a real alternative, not a
+ *   restatement of the requirement's own already-full provider list that
+ *   V2-B2's `strategies` field already carries), and
+ * - one `'composed'` strategy spanning every satisfied requirement of the
+ *   task (one component per requirement, each carrying that requirement's
+ *   full provider list), whenever two or more satisfied requirements
+ *   exist -- a real multi-capability approach, not an invented heuristic.
+ *
+ * Same shape as `MetaIntelligenceStrategies` (a `readonly` list plus a
+ * `generatedAt` timestamp) for a consistent feel. See
+ * `MetaIntelligenceOrchestrator.generateStrategyAlternatives()`. Deliberately
+ * a separate field/method from V2-B2's `generateStrategies()` rather than
+ * an extension of it: `generateStrategies()`'s own single-requirement
+ * output (one strategy per satisfied requirement, full provider list
+ * copied verbatim) must stay byte-for-byte unchanged for the no-diversity
+ * case, including for a requirement that happens to have more than one
+ * provider -- that existing behavior is exactly what V2-B2's own tests
+ * assert and must keep asserting. There is intentionally no score, rank,
+ * priority, confidence, or `selected` field on any value here either --
+ * evaluation/selection over these strategies remains V2-B4/B5's job.
+ */
+export interface MetaIntelligenceStrategyAlternatives {
+  readonly strategies: readonly MetaIntelligenceStrategy[];
+  /** ISO-8601 timestamp of when the alternatives were generated. */
+  readonly generatedAt: string;
+}
+
 /** One Meta-Intelligence task, tracked from intake through (eventually) the full pipeline. */
 export interface MetaIntelligenceTask {
   /** Stable id for this task, unique within one orchestrator instance. */
@@ -359,6 +470,92 @@ export interface MetaIntelligenceTask {
   readonly capabilityDecomposition?: MetaIntelligenceCapabilityDecomposition;
   /** Present once `generateCandidateStrategies()` has run (stage `'candidate-strategies'`); absent before then. */
   readonly candidateStrategies?: MetaIntelligenceCandidateStrategies;
+  /**
+   * Present once `generateStrategies()` has run (V2-B2); absent before
+   * then. Additive alongside `candidateStrategies` -- does not replace
+   * it, is not read or written by any V1 stage method, and does not gate
+   * on or change `stage` (it is not one of `MetaIntelligenceStage`'s ten
+   * pipeline stages).
+   */
+  readonly strategies?: MetaIntelligenceStrategies;
+  /**
+   * Present once `generateStrategyAlternatives()` has run (V2-B3); absent
+   * before then. Additive alongside `strategies` -- does not replace it,
+   * requires it to already be present, and does not gate on or change
+   * `stage` (it is not one of `MetaIntelligenceStage`'s ten pipeline
+   * stages).
+   */
+  readonly strategyAlternatives?: MetaIntelligenceStrategyAlternatives;
+  /**
+   * Present once `evaluateStrategyOptions()` has run (V2-B4); absent
+   * before then. Additive alongside `strategies`/`strategyAlternatives`
+   * -- does not replace either, requires `strategies` to already be
+   * present, and does not gate on or change `stage` (it is not one of
+   * `MetaIntelligenceStage`'s ten pipeline stages). Distinct from, and
+   * never read/written by, the frozen V1 `strategyEvaluation` field
+   * below, which continues to score `candidateStrategies` only.
+   */
+  readonly strategyOptionsEvaluation?: MetaIntelligenceStrategyOptionsEvaluation;
+  /**
+   * Present once `authorizeComposition()` has run (V2-C1); absent before
+   * then. Additive alongside `strategyOptionsEvaluation` -- requires it to
+   * already be present, does not replace or modify it, and does not gate
+   * on or change `stage` (it is not one of `MetaIntelligenceStage`'s ten
+   * pipeline stages). Distinct from, and never read/written by, the
+   * frozen V1 `governance` field below, which continues to gate only
+   * `strategyEvaluation.selection`.
+   */
+  readonly compositionBoundary?: MetaIntelligenceCompositionBoundary;
+  /**
+   * Present once `buildExecutionPlan()` has run (V2-C2); absent before
+   * then. Additive alongside `compositionBoundary` -- requires it to
+   * already be present with `decision === 'ACT'`, does not replace or
+   * modify it, and does not gate on or change `stage` (it is not one of
+   * `MetaIntelligenceStage`'s ten pipeline stages). Distinct from, and
+   * never read/written by, `governAction()`/`MetaIntelligenceGovernance`
+   * below, which continues to gate only the frozen V1
+   * `strategyEvaluation.selection`.
+   */
+  readonly executionPlan?: MetaIntelligenceExecutionPlan;
+  /**
+   * V2-C4: present once `recordExecutionOutcome()` has run; absent
+   * before then. Additive alongside `executionPlan` -- requires it to
+   * already be present, does not replace or modify it, and does not
+   * gate on or change `stage` (it is not one of `MetaIntelligenceStage`'s
+   * ten pipeline stages). Reuses the frozen V1 `MetaIntelligenceResult`
+   * shape verbatim (Law D, One Epistemic Language -- no new leaf data
+   * shape): a claimed outcome's status/simulated/detail/timestamp are
+   * exactly as meaningful for an `executionPlan`-authorized decision as
+   * for a `governance`-authorized one. Distinct from, and never
+   * read/written by, the frozen V1 `result` field below, which continues
+   * to require `governance.decision` to be `'ACT'`/`'SIMULATE'`.
+   */
+  readonly executionResult?: MetaIntelligenceResult;
+  /**
+   * V2-C4: present once `recordExecutionOutcome()` has run, alongside
+   * `executionResult`. Reuses the frozen V1 `MetaIntelligenceVerification`
+   * shape verbatim (Law D): the same goal/constraint/known-basis check
+   * `verifyResult()` already performs for the frozen V1 `result`/
+   * `verification` pair applies unchanged here. Distinct from, and never
+   * read/written by, the frozen V1 `verification` field below.
+   */
+  readonly executionVerification?: MetaIntelligenceVerification;
+  /**
+   * V2-C5: present once `recordExecutionAdaptation()` has run; absent
+   * before then. Additive alongside `executionVerification` -- requires
+   * it to already be present, does not replace or modify it, and does
+   * not gate on or change `stage` (it is not one of `MetaIntelligenceStage`'s
+   * ten pipeline stages). Reuses the frozen V1 `MetaIntelligenceAdaptation`
+   * shape verbatim (Law D, One Epistemic Language -- no new leaf type at
+   * all was needed for this field, the first V2 AWU to need neither a
+   * new type nor even a new field shape): a caller's
+   * retry/re-plan/escalate/accept response is exactly as meaningful for
+   * an `executionVerification`-derived outcome as for the frozen V1
+   * `verification` one. Distinct from, and never read/written by, the
+   * frozen V1 `adaptation` field below, which continues to require
+   * `task.stage === 'result-verification'`.
+   */
+  readonly executionAdaptation?: MetaIntelligenceAdaptation;
   /** Present once `evaluateStrategies()` has run (stage `'strategy-evaluation'`); absent before then. */
   readonly strategyEvaluation?: MetaIntelligenceStrategyEvaluation;
   /** Present once `governAction()` has run (stage `'action-governance'`); absent before then. */
@@ -507,6 +704,84 @@ export interface MetaIntelligenceStrategyEvaluationRequest {
 }
 
 /**
+ * V2-B4: one strategy option's DecisionScore result, over the combined
+ * option set `task.strategies.strategies` + (if present)
+ * `task.strategyAlternatives.strategies`. `strategyId` is the
+ * DecisionScore `optionId`, mirroring
+ * `MetaIntelligenceStrategyRankEntry.candidateId`'s own convention on the
+ * frozen V1 surface (this is a separate, parallel type, not a rename of
+ * it -- see `MetaIntelligenceStrategyOptionsEvaluation`).
+ */
+export interface MetaIntelligenceStrategyOptionRankEntry {
+  readonly strategyId: string;
+  readonly score: number;
+  readonly rank: number;
+}
+
+/**
+ * V2-B4: the recorded outcome of `evaluateStrategyOptions()` -- exactly
+ * one strategy (`strategyId` always equals the `id` of a
+ * `MetaIntelligenceStrategy` present in the evaluated option set) or an
+ * explicit "none selected". Reuses `MetaIntelligenceNoSelectionReason`
+ * as-is (Law D, One Epistemic Language): the three reasons ("no
+ * candidates to score", "tie for top", "below the caller's stability
+ * threshold") are exactly as applicable to strategy options as to V1
+ * candidates: introducing a parallel reason type would restate the same
+ * three mechanical outcomes under new names for no measurable benefit.
+ */
+export type MetaIntelligenceStrategyOptionSelection =
+  | { readonly status: 'selected'; readonly strategyId: string }
+  | { readonly status: 'none'; readonly reason: MetaIntelligenceNoSelectionReason };
+
+/**
+ * V2-B4 (Phase B -- Cognitive Strategy Engine): the "Strategy Evaluation"
+ * output over real `MetaIntelligenceStrategy` values (V2-B1..B3) --
+ * additive alongside, and never touching, the frozen V1
+ * `MetaIntelligenceStrategyEvaluation` surface, which continues to score
+ * `candidateStrategies` only.
+ *
+ * V2-A1's G5 FAIL finding was that DecisionScore criteria are fully
+ * caller-supplied/generic, with no risk/cost/evidence/resource dimension
+ * the component itself reasons about. Per Law D and Law G (80/20
+ * filter), this AWU did not invent a new criterion shape for that: a
+ * caller can already express a risk or cost dimension as a
+ * `DecisionScoreCriterion` with `direction: 'minimize'`, and an evidence
+ * or resource dimension with `direction: 'maximize'`, scored per option
+ * in the existing `DecisionScoreMatrix` -- exactly what
+ * `evaluateStrategyOptions()` accepts unchanged via the reused
+ * `MetaIntelligenceStrategyEvaluationRequest` shape (its `criteria` /
+ * `scores` members were already fully generic, never
+ * `candidateStrategies`-specific). See `.mi/DECISIONS.jsonl` for the
+ * full assessment. The genuine gap this type/method closes is
+ * structural, not a criterion shape: `evaluateStrategies()` can only
+ * ever score `candidateStrategies` (gated to the `'candidate-strategies'`
+ * stage) -- it has no path to score `MetaIntelligenceStrategy` /
+ * `MetaIntelligenceStrategyAlternatives` values at all, so a real
+ * multi-requirement `'composed'` strategy (V2-B3) could never be
+ * risk/cost/evidence/resource-evaluated until now. There is intentionally
+ * no new criterion/matrix type here, mirroring `MetaIntelligenceStrategy`'s
+ * own "no invented scores" precedent one level up: only the evaluation
+ * *output* shape is new (`strategyId` in place of `candidateId`), never
+ * the criterion/scoring vocabulary.
+ */
+export interface MetaIntelligenceStrategyOptionsEvaluation {
+  readonly criteria: readonly DecisionScoreCriterion[];
+  /** `scores[strategyId][criterionId]`, as supplied by the caller. */
+  readonly scores: DecisionScoreMatrix;
+  /** Best-first, one entry per evaluated strategy option. Empty iff there were no options. */
+  readonly ranking: readonly MetaIntelligenceStrategyOptionRankEntry[];
+  /** DecisionScore's Decision Stability Index of the ranking, or `null` if nothing was scored. */
+  readonly dsi: number | null;
+  /** DecisionScore's Decision Flip Points, unchanged. */
+  readonly dfp: readonly DecisionFlipPoint[];
+  /** The caller's stability threshold, or `null` if none was set. */
+  readonly minStability: number | null;
+  readonly selection: MetaIntelligenceStrategyOptionSelection;
+  /** ISO-8601 timestamp of when this evaluation was recorded. */
+  readonly evaluatedAt: string;
+}
+
+/**
  * AWU-08's action-governance boundary. `'ACT'` authorizes going on to use
  * the AWU-07 selection (execution/composition — not implemented until a
  * later AWU); `'WAIT'` defers the decision without rejecting it;
@@ -545,6 +820,215 @@ export interface MetaIntelligenceGovernanceRequest {
   decision: MetaIntelligenceGovernanceDecision;
   /** Optional caller-supplied rationale, recorded verbatim (trimmed). */
   reason?: string;
+}
+
+/**
+ * V2-C1 (Phase C -- Closed-Loop Cognition): the "Cognitive Composition
+ * boundary" -- the smallest additive, contract-level boundary that lets a
+ * caller take an already-`evaluateStrategyOptions()`'d task's
+ * `strategyOptionsEvaluation.selection` (V2-B4/B5) and describe how the
+ * selected strategy would be composed/executed, without a real execution
+ * runtime, an execution-plan representation (V2-C2), a cognitive trace
+ * (V2-C3), or verification/outcome analysis (V2-C4).
+ *
+ * Per `.mi/DECISIONS.jsonl`: this AWU assessed, and rejected, treating the
+ * existing `MetaIntelligenceStrategyComponent` shape plus `selection` as
+ * already-sufficient as-is. `selection` names only a `strategyId` (or
+ * `'none'`); it does not itself carry that strategy's `components` --
+ * resolving a `strategyId` back into a concrete, composable component list
+ * requires re-searching `task.strategies`/`task.strategyAlternatives`,
+ * which is real, missing behavior, not a restatement. Reusing
+ * `MetaIntelligenceGovernanceDecision`'s four ACT/WAIT/ASK/SIMULATE values
+ * (Law D, One Epistemic Language) closes the second, explicitly-deferred
+ * V2-B5 gap: `strategyOptionsEvaluation.selection` alone provides no
+ * boundary distinguishing "this strategy is now authorized to be
+ * composed" from "this strategy was merely selected" -- any caller could
+ * already read any strategy's `components` regardless of whether
+ * `evaluateStrategyOptions()` ever ran or what it selected. This type is
+ * the first genuine, additive answer to both gaps together: a single,
+ * immutable snapshot binding a specific evaluated `selection` to (when
+ * selected) its resolved `components`, gated by an explicit,
+ * caller-supplied composition decision -- mirroring `governAction()`'s
+ * own "caller decides, this only records" mechanics over `strategyId`
+ * instead of `candidateId`, and deliberately NOT reusing or modifying
+ * `MetaIntelligenceGovernance`/`governAction()` (which continues to gate
+ * only the frozen V1 `strategyEvaluation.selection`).
+ *
+ * There is intentionally no ordering/dependency field beyond `components`'
+ * own array order: no real per-component dependency data exists anywhere
+ * upstream (capability requirements carry no such relationship), so
+ * inventing one here would be an unverified assumption (Law E, Evidence
+ * Honesty) rather than a real capability. Array order, copied verbatim
+ * from the resolved strategy, is the only ordering this build can honestly
+ * claim.
+ */
+export interface MetaIntelligenceCompositionBoundary {
+  /** The caller's requested composition decision. Reuses `MetaIntelligenceGovernanceDecision`'s four values (Law D) -- never a fifth, invented value. */
+  readonly decision: MetaIntelligenceGovernanceDecision;
+  /** Verbatim copy of `strategyOptionsEvaluation.selection` at the moment this boundary was recorded -- not a live reference, so it stays traceable even if later state changes. */
+  readonly selection: MetaIntelligenceStrategyOptionSelection;
+  /**
+   * The selected strategy's `components`, resolved from
+   * `task.strategies`/`task.strategyAlternatives` and copied verbatim, in
+   * the same order the strategy itself declares them -- this is the
+   * "describe how it would be composed" contract. `null` when `selection`
+   * is `{ status: 'none' }`: there is no strategy to describe composing.
+   */
+  readonly components: readonly MetaIntelligenceStrategyComponent[] | null;
+  /** Caller-supplied rationale, verbatim (trimmed), or `null` if none was given. */
+  readonly reason: string | null;
+  /** ISO-8601 timestamp of when this composition boundary was recorded. */
+  readonly boundAt: string;
+}
+
+/** Input to `MetaIntelligenceOrchestrator.authorizeComposition()`. */
+export interface MetaIntelligenceCompositionBoundaryRequest {
+  /** The caller's requested composition decision. Must be one of `MetaIntelligenceGovernanceDecision`'s four values. */
+  decision: MetaIntelligenceGovernanceDecision;
+  /** Optional caller-supplied rationale, recorded verbatim (trimmed). */
+  reason?: string;
+}
+
+/**
+ * V2-C2 (Phase C -- Closed-Loop Cognition): the "Execution Plan"
+ * representation -- the smallest additive representation of what
+ * executing an already-`'ACT'`-authorized `MetaIntelligenceCompositionBoundary`'s
+ * components would look like, without a real execution runtime, a
+ * cognitive trace (V2-C3), or verification/outcome analysis (V2-C4).
+ *
+ * Per `.mi/DECISIONS.jsonl`: this AWU assessed, and rejected, treating
+ * `compositionBoundary.components` as already sufficient as an execution
+ * plan. `components` (V2-C1) is populated for ANY composition decision
+ * over a `'selected'` strategy option -- `'WAIT'`/`'ASK'`/`'SIMULATE'`
+ * included -- because it is a descriptive answer to "what would composing
+ * this strategy look like", not an authorization to actually treat it as
+ * a plan. The real, structural gap is existence-gating: a plan a caller
+ * could hand to a (future, still-nonexistent) executor must only be
+ * representable once the boundary's `decision` is actually `'ACT'` --
+ * unlike `components`, which is deliberately inspectable under
+ * `'WAIT'`/`'ASK'`/`'SIMULATE'` too. This type closes exactly that one
+ * gap and nothing else.
+ *
+ * `steps` is a verbatim, order-preserving copy of
+ * `compositionBoundary.components` -- the same `MetaIntelligenceStrategyComponent`
+ * shape (Law D, One Epistemic Language: no new leaf data shape), so each
+ * step still names only a capability requirement + its providers (Law C,
+ * Contract Over Implementation Dependency -- a step never names another
+ * model's implementation directly). There is intentionally no explicit
+ * per-step ordinal, status, or dependency field: array order already
+ * equals `components`' own order (an explicit ordinal would restate the
+ * index for zero new expressive power, Law G), and no real per-component
+ * lifecycle or dependency data exists anywhere upstream to represent
+ * honestly (Law E, Evidence Honesty) -- real status/lifecycle tracking of
+ * an in-progress execution is a cognitive trace's job (V2-C3), not this
+ * one's.
+ */
+export interface MetaIntelligenceExecutionPlan {
+  /** Verbatim, order-preserving copy of the 'ACT'-authorized `compositionBoundary.components`. Never empty (mirrors `MetaIntelligenceStrategy.components`'s own non-empty invariant, since an 'ACT' boundary requires a 'selected' strategy). */
+  readonly steps: readonly MetaIntelligenceStrategyComponent[];
+  /** ISO-8601 timestamp of when this execution plan was derived. */
+  readonly derivedAt: string;
+}
+
+/**
+ * V2-C3 (Phase C -- Closed-Loop Cognition): one entry in a
+ * `MetaIntelligenceCognitiveTrace` -- a single `MetaIntelligenceTask`
+ * field the task has actually reached, summarized uniformly regardless
+ * of that field's own shape or its own timestamp field's name.
+ *
+ * Per `.mi/DECISIONS.jsonl`: every one of `MetaIntelligenceTask`'s
+ * fields already carries its own ISO-8601 timestamp, but under a
+ * different name on almost every type (`receivedAt` / `understoodAt` /
+ * `recordedAt` (two different types) / `decomposedAt` / `generatedAt`
+ * (three types) / `evaluatedAt` (two types) / `governedAt` / `boundAt` /
+ * `derivedAt` / `verifiedAt` / `adaptedAt`) -- so a caller wanting "the
+ * reasoning path in timestamp order" would first need to know every
+ * field's name AND its own timestamp field's name, and would still have
+ * no uniform place to find which id (a selected candidate/strategy, a
+ * recorded requirement/goal/constraint/epistemic item) that field's
+ * content actually names. `recordedAt` and `idsTouched` below are that
+ * one genuine, additive normalization -- never a newly-invented fact:
+ * `recordedAt` is always copied verbatim from the underlying field's own
+ * timestamp (Law D, One Epistemic Language -- no parallel logging
+ * system, no freshly-generated per-entry timestamp), and `idsTouched` is
+ * always read from ids the field's own recorded content already lists
+ * or selects (Law E, Evidence Honesty -- never invented; empty for a
+ * field with no id-bearing content, such as `problem`, `understanding`,
+ * `result`, or `adaptation`).
+ */
+export interface MetaIntelligenceCognitiveTraceEntry {
+  /**
+   * Name of the `MetaIntelligenceTask` field this entry summarizes --
+   * one of `'problem'`, `'understanding'`, `'goalsConstraints'`,
+   * `'epistemicTracking'`, `'capabilityDecomposition'`,
+   * `'candidateStrategies'`, `'strategies'`, `'strategyAlternatives'`,
+   * `'strategyEvaluation'`, `'strategyOptionsEvaluation'`,
+   * `'governance'`, `'compositionBoundary'`, `'executionPlan'`,
+   * `'executionResult'`, `'executionVerification'` (V2-C5: wired in by
+   * `getCognitiveTrace()` alongside the V2-C4 fields they summarize),
+   * `'executionAdaptation'` (V2-D1 housekeeping: wired in by
+   * `getCognitiveTrace()` alongside the V2-C5 field it summarizes --
+   * see `MetaIntelligenceCognitiveTrace`'s own doc comment), `'result'`,
+   * `'verification'`, `'adaptation'`.
+   */
+  readonly field: string;
+  /** That field's own recorded timestamp, copied verbatim -- never a newly-generated one. */
+  readonly recordedAt: string;
+  /**
+   * Ids the field's own recorded content actually names (e.g. a
+   * selected candidateId/strategyId, or goal/constraint/epistemic-item/
+   * requirement/candidate/strategy ids it lists) -- never invented.
+   * Empty when the field records no id-bearing content, or when its
+   * selection is `{ status: 'none' }`.
+   */
+  readonly idsTouched: readonly string[];
+}
+
+/**
+ * V2-C3 (Phase C -- Closed-Loop Cognition): the "Cognitive Trace" -- the
+ * smallest additive, reproducible record of the reasoning path a task
+ * has actually taken so far, without a real execution runtime or
+ * verification/outcome analysis beyond what V1's own `recordResult()`
+ * already computes (further verification/outcome analysis is V2-C4's
+ * job, not this one's).
+ *
+ * Purely derived and never stored on `MetaIntelligenceTask` itself --
+ * mirroring `MetaIntelligenceProblemRepresentation`'s (V2-A2) read-only-
+ * view precedent, not `MetaIntelligenceCompositionBoundary`'s/
+ * `MetaIntelligenceExecutionPlan`'s record-once-and-store convention.
+ * `getCognitiveTrace()` composed all sixteen of `MetaIntelligenceTask`'s
+ * fields as of V2-C3 (versus `getProblemRepresentation()`'s four), since a
+ * reasoning-path record that stopped at `epistemicTracking` would miss
+ * every V2-B/V2-C addition and the frozen V1
+ * `candidateStrategies`/`strategyEvaluation`/`governance`/`result`/
+ * `verification`/`adaptation` surface entirely. V2-C4 added two more
+ * fields (`executionResult`/`executionVerification`) but, per its own
+ * `.mi/NEXT.json`, deliberately froze `getCognitiveTrace()` for that AWU
+ * without wiring them in; V2-C5 closed that gap as pure housekeeping,
+ * bringing the composed total to eighteen. V2-C5 also added a nineteenth
+ * field, `executionAdaptation`, which it deliberately left uncomposed
+ * here -- extending `getCognitiveTrace()` to cover a field the same AWU
+ * that introduces it also just added would have been indistinguishable
+ * from designing the field's trace representation before any caller had
+ * ever populated it. V2-D1 closes that gap as the same kind of one-AWU-
+ * later housekeeping, bringing the composed total to nineteen.
+ *
+ * Available at ANY point in a task's life -- unlike `buildExecutionPlan()`
+ * (V2-C2), which is deliberately gated to an `'ACT'`-authorized
+ * `compositionBoundary`, a trace has no "not yet authorized to inspect"
+ * concern to enforce: a partial trace of a task that has only reached
+ * `'understood'` is itself a legitimate, honest answer to "what
+ * reasoning has this task done so far", not a premature one.
+ */
+export interface MetaIntelligenceCognitiveTrace {
+  /** Id of the `MetaIntelligenceTask` this trace was derived from. */
+  readonly taskId: string;
+  /** Copy of the task's `stage` at the moment this trace was derived. */
+  readonly stage: MetaIntelligenceStage;
+  /** One entry per task field the task has reached so far, in fixed pipeline order (`'problem'` always first and always present). */
+  readonly entries: readonly MetaIntelligenceCognitiveTraceEntry[];
+  /** ISO-8601 timestamp of when this read-only trace was derived (not when any underlying field was recorded). */
+  readonly derivedAt: string;
 }
 
 /**
@@ -686,4 +1170,53 @@ export interface MetaIntelligenceAdaptationRequest {
   decision: MetaIntelligenceAdaptationDecision;
   /** Optional caller-supplied rationale, recorded verbatim (trimmed). */
   reason?: string;
+}
+
+/**
+ * V2-A2: an explicit presence wrapper used only by
+ * `MetaIntelligenceProblemRepresentation`. A task field that has not yet
+ * been recorded (the task has not advanced past the stage that produces
+ * it) is `{ present: false }` — never silently collapsed to an empty
+ * object/array shape of the underlying type, which would be
+ * indistinguishable from "recorded, but empty" (e.g. `addGoalsConstraints()`
+ * called with `{ goals: [], constraints: [] }`). `present: true` carries
+ * the underlying value unchanged, verbatim from `MetaIntelligenceTask`.
+ */
+export type MetaIntelligencePresence<T> =
+  | { readonly present: true; readonly value: T }
+  | { readonly present: false };
+
+/**
+ * V2-A2 (Phase A — V1 Exit + V2 Foundation): a structured, read-only
+ * Problem Representation composing the V1 fields that already describe a
+ * task's problem/understanding/goals-constraints/epistemic state
+ * (`MetaIntelligenceTask.problem` / `.understanding` / `.goalsConstraints`
+ * / `.epistemicTracking`) into one view. This is purely derived — it adds
+ * no new data, computes nothing beyond copying existing fields, and does
+ * not change `MetaIntelligenceTask`, `MetaIntelligenceStage`, or any
+ * existing stage method. Its only reason to exist is to answer "what do
+ * we currently know about the problem?" in one call without hand-picking
+ * four optional task fields, while staying honest (via
+ * `MetaIntelligencePresence`) about which of them the task has not
+ * reached yet, per `MetaIntelligenceOrchestrator.getProblemRepresentation()`.
+ *
+ * `problem` has no presence wrapper: it is recorded unconditionally by
+ * `intake()` at the `'received'` stage, so it is never absent for any
+ * task that exists at all.
+ */
+export interface MetaIntelligenceProblemRepresentation {
+  /** Id of the `MetaIntelligenceTask` this view was derived from. */
+  readonly taskId: string;
+  /** Copy of the task's `stage` at the moment this view was derived. */
+  readonly stage: MetaIntelligenceStage;
+  /** Always present: verbatim copy of `MetaIntelligenceTask.problem`. */
+  readonly problem: MetaIntelligenceProblem;
+  /** Present once `understand()` has run (stage `'understood'` or later); explicit absence before then. */
+  readonly understanding: MetaIntelligencePresence<MetaIntelligenceUnderstanding>;
+  /** Present once `addGoalsConstraints()` has run (stage `'goals-constraints'` or later); explicit absence before then. */
+  readonly goalsConstraints: MetaIntelligencePresence<MetaIntelligenceGoalsConstraints>;
+  /** Present once `addEpistemicTracking()` has run (stage `'epistemic-tracking'` or later); explicit absence before then. */
+  readonly epistemicTracking: MetaIntelligencePresence<MetaIntelligenceEpistemicTracking>;
+  /** ISO-8601 timestamp of when this read-only view was derived (not when any underlying field was recorded). */
+  readonly derivedAt: string;
 }

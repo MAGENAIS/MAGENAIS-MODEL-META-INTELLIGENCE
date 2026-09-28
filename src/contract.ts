@@ -1,28 +1,51 @@
 /**
  * contract.ts
  *
- * A self-contained copy of the small portion of the MAGENAIS Model
- * contract (ModelManifest) that this package's `model.json` is shaped
- * against, so this repo has ZERO dependency on MAGENAIS itself and can
- * be cloned, installed, and read entirely on its own.
+ * The small, self-contained set of shared shapes this package needs so it
+ * has ZERO dependency on MAGENAIS itself (it can be cloned, installed and
+ * used entirely on its own):
  *
- * NOTE: unlike DecisionScore/PatternSense/AnomalyMind, this package does
- * NOT yet implement the Model interface (`execute(request): Promise<
- * ModelResponse>`). Meta-Intelligence, as of this repo's current
- * version, is an orchestrator over its own task lifecycle
- * (`intake()` / `understand()`), not a single-shot Model the router can
- * invoke — see README.md's "Status" section. This file therefore only
- * mirrors `ModelManifest`, not the full Model/ModelRequest/ModelResponse
- * set the sibling repos copy. Byte-for-byte alignment with those repos'
- * `contract.ts` is intentionally deferred until Meta-Intelligence has an
- * `execute()` boundary to describe (see the build's AWU-08 action-
- * governance step).
+ *  - `ModelManifest` / `FailureMode` — the subset of the MAGENAIS manifest
+ *    contract that this package's `model.json` is shaped against. Kept in
+ *    sync with `schemas/model-manifest.schema.json` (a vendored copy of the
+ *    MAGENAIS-MODELS schema); `tests/manifest.test.ts` validates `model.json`
+ *    against that schema.
+ *  - `CapabilityGraphLike` — the one method of MAGENAIS's `CapabilityGraph`
+ *    that capability decomposition calls (structural / duck-typed).
+ *  - The DecisionScore input/output shapes exchanged with a strategy scorer.
+ *    They are the canonical definitions inside this package; they are
+ *    structurally identical to MAGENAIS's DecisionScore types, so a scorer
+ *    from either side is interchangeable.
+ *
+ * Meta-Intelligence is deliberately NOT a `Model<TInput, TOutput>`: it is a
+ * stateful, multi-call orchestrator over a task lifecycle, not a single
+ * `execute(request) -> response` prediction. There is therefore no
+ * `ModelRequest` / `ModelResponse` here (see docs/integration.md).
  */
 
 export type ModelType = 'algorithm' | 'ml' | 'llm' | 'vision' | 'audio' | 'graph' | 'hybrid';
 export type ModelPricingType = 'free' | 'paid' | 'freemium' | 'enterprise';
 export type ModelTrustLevel = 'magenais-verified' | 'community-verified' | 'experimental' | 'unverified';
 
+export type FailureModeCategory =
+  | 'false-positive'
+  | 'false-negative'
+  | 'degradation'
+  | 'malformed-input'
+  | 'edge-case'
+  | 'adversarial'
+  | 'dependency-failure'
+  | 'unsupported-condition';
+
+/** A declared way the component can fail and what it does when that happens. */
+export interface FailureMode {
+  id: string;
+  description: string;
+  behavior?: string;
+  category?: FailureModeCategory;
+}
+
+/** The manifest fields this package declares (all V4.1 fields plus the V5 cognitive-contract fields it uses). */
 export interface ModelManifest {
   id: string;
   name: string;
@@ -38,38 +61,52 @@ export interface ModelManifest {
   uri?: string;
   repository?: string;
   documentation?: string;
+  demo?: string;
+  layer?: 'primitive' | 'native-model' | 'composite-model' | 'cognitive-system';
+  family?: string;
+  purpose?: string;
+  problem?: string;
+  nonGoals?: string[];
+  inputs?: Array<{ type: string; description?: string; required?: boolean; schemaRef?: string }>;
+  outputs?: Array<{ type: string; description?: string; required?: boolean; schemaRef?: string }>;
+  dependencies?: { requiresCapabilities?: string[]; optionalCapabilities?: string[]; requiresModels?: string[] };
+  executionMode?: 'synchronous' | 'asynchronous' | 'streaming' | 'batch';
+  resourceRequirements?: {
+    compute?: string;
+    memory?: string;
+    gpu?: boolean;
+    network?: boolean;
+    externalApi?: boolean;
+    latencyExpectation?: string;
+  };
+  scientificStatus?: 'established' | 'emerging' | 'experimental' | 'speculative';
+  evidenceLevel?: 'none' | 'unit-tested' | 'benchmarked' | 'baseline-compared' | 'ablated';
+  limitations?: string[];
+  failureModes?: FailureMode[];
+  benchmarkIds?: string[];
+  verificationStatus?: 'not-ready' | 'gate-passed' | 'verified';
+  composability?: { independentlyExecutable: boolean; composesWith?: string[]; providesCapabilityTo?: string[] };
+  provenance?: { origin?: string; createdAt?: string; basedOn?: string[]; benchmarkedAtCodeVersion?: string };
+  implementationStatus?: 'designed' | 'partial' | 'implemented' | 'deprecated';
+  cognitivePassport?: string;
+  modelCard?: string;
 }
 
 /**
- * AWU-05: a self-contained mirror of the one `CapabilityGraph` query
- * method `decomposeCapabilities()` needs
- * (`MAGENAIS-main/src/ModelsHub/graph/CapabilityGraph.ts`'s
- * `providersOf()`), for the same zero-dependency reason `ModelManifest`
- * above is mirrored rather than imported. This is a structural
- * (duck-typed) interface, not a class: a real `CapabilityGraph` instance
- * from MAGENAIS-main already satisfies it as-is (it has a `providersOf`
- * method with this exact signature), so passing one in from a caller
- * that *does* depend on MAGENAIS-main works unchanged — this package
- * just doesn't need to import the class to describe what it calls on
- * it. Keep this signature in sync by hand with `CapabilityGraph`'s own
- * `providersOf()` if that ever changes.
+ * Structural mirror of the one `CapabilityGraph` query capability
+ * decomposition needs (`providersOf()`). A real MAGENAIS `CapabilityGraph`
+ * satisfies it as-is; standalone callers can pass any object with this
+ * method, e.g. `{ providersOf: (c) => table[c] ?? [] }`.
  */
 export interface CapabilityGraphLike {
-  /** Model ids declaring they provide the given capability. Empty array if none do. */
+  /** Model/provider ids declaring they provide the given capability. Empty array if none do. */
   providersOf(capability: string): string[];
 }
 
 /**
- * AWU-07: self-contained structural mirrors of the DecisionScore shapes
- * (`MAGENAIS-main/src/ModelsHub/decision-score/types.ts`) that
- * `evaluateStrategies()` sends to / receives from its scorer, mirrored
- * rather than imported for the same zero-dependency reason as
- * `CapabilityGraphLike` above. They deliberately keep the real names so
- * `types.ts` reads identically in both repos. A real DecisionScore
- * scorer from MAGENAIS-main (`scoreWithDecisionScore`) already satisfies
- * `MetaIntelligenceStrategyScorer` structurally. Keep these in sync by
- * hand with the originals if those ever change; the mirror covers only the
- * fields Meta-Intelligence reads or passes through.
+ * DecisionScore input/output shapes exchanged with a strategy scorer
+ * (`MetaIntelligenceStrategyScorer`). The bundled default scorer
+ * (`scoreWithDecisionScore`) and any caller-supplied scorer use these.
  */
 export type DecisionScoreDirection = 'maximize' | 'minimize';
 
